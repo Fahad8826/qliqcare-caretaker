@@ -1124,9 +1124,9 @@ import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
 import 'package:qlickcare/Model/attendencestatus_model.dart';
 import 'package:qlickcare/Model/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
+import 'package:qlickcare/Services/locationguard.dart';
 import 'package:qlickcare/Services/locationservice.dart';
-import 'package:qlickcare/Services/slidingservice.dart';
-import 'package:qlickcare/Services/profileservice.dart'; // Add this import
+import 'package:qlickcare/Services/slidingservice.dart'; 
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
@@ -1164,6 +1164,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       await _fetchCaretakerLocation();
     });
   }
+  
 
   // Fetch caretaker location from profile
   Future<void> _fetchCaretakerLocation() async {
@@ -1379,141 +1380,82 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   }
 
   // Build attendance slider with location check
-  Widget _buildAttendanceSlider(Size size, BookingDetails b) {
-    return Obx(() {
-      final bool isCheckedOut = controller.isCheckedOutToday;
+  // Replace the _buildAttendanceSlider method in your BookingDetailsPage with this:
 
-      if (isCheckedOut) {
-        return Center(
-          child: Text(
-            "Attendance completed for today",
-            style: AppTextStyles.small.copyWith(
-              color: AppColors.success,
-              fontWeight: FontWeight.w600,
-            ),
+Widget _buildAttendanceSlider(Size size, BookingDetails b) {
+  return Obx(() {
+    final bool isCheckedOut = controller.isCheckedOutToday;
+
+    if (isCheckedOut) {
+      return Center(
+        child: Text(
+          "Attendance completed for today",
+          style: AppTextStyles.small.copyWith(
+            color: AppColors.success,
+            fontWeight: FontWeight.w600,
           ),
-        );
+        ),
+      );
+    }
+
+    // Parse booking coordinates
+    double? bookingLat;
+    double? bookingLng;
+
+    try {
+      if (b.latitude.isNotEmpty && b.longitude.isNotEmpty) {
+        bookingLat = double.parse(b.latitude);
+        bookingLng = double.parse(b.longitude);
       }
+    } catch (e) {
+      debugPrint("❌ Error parsing booking coordinates: $e");
+    }
 
-      // Parse booking coordinates
-      double? bookingLat;
-      double? bookingLng;
-
-      try {
-        if (b.latitude.isNotEmpty && b.longitude.isNotEmpty) {
-          bookingLat = double.parse(b.latitude);
-          bookingLng = double.parse(b.longitude);
-        }
-      } catch (e) {
-        debugPrint("❌ Error parsing booking coordinates: $e");
-      }
-
-      // Check if booking coordinates are available
-      if (bookingLat == null || bookingLng == null) {
-        return Center(
-          child: Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.location_off,
+    // Check if booking coordinates are available
+    if (bookingLat == null || bookingLng == null) {
+      return Center(
+        child: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.error.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.location_off,
+                color: AppColors.error,
+                size: 32,
+              ),
+              SizedBox(height: 8),
+              Text(
+                "Location not available for this booking",
+                style: AppTextStyles.body.copyWith(
                   color: AppColors.error,
-                  size: 32,
+                  fontWeight: FontWeight.w600,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  "Location not available for this booking",
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.error,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        );
-      }
+        ),
+      );
+    }
 
-      // Check if caretaker location is loading or not available
-      if (isLoadingLocation || caretakerLocation == null) {
-        return Center(
-          child: Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isLoadingLocation) ...[
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    "Fetching your location...",
-                    style: AppTextStyles.small.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ] else ...[
-                  Icon(
-                    Icons.location_searching,
-                    color: AppColors.error,
-                    size: 32,
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    "Unable to fetch your location",
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: _fetchCaretakerLocation,
-                    icon: Icon(Icons.refresh, size: 16),
-                    label: Text("Retry"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      }
-
-      // Show attendance slider with location check
-      return AttendanceSlideButton(
+    // Wrap AttendanceSlideButton with LocationGuard
+    return LocationGuard(
+      targetLatitude: bookingLat,
+      targetLongitude: bookingLng,
+      radiusInMeters: 100.0, // Adjust as needed
+      showDistance: true,
+      autoRefresh: false, // Set to true if you want periodic location updates
+      refreshIntervalSeconds: 30,
+      onLocationStatusChanged: (isWithinRange, distance) {
+        debugPrint("Location status: $isWithinRange, Distance: $distance");
+      },
+      child: AttendanceSlideButton(
         isCheckedIn: controller.isCheckedInToday,
-        caretakerLatitude: caretakerLocation!['lat']!,
-        caretakerLongitude: caretakerLocation!['lng']!,
-        bookingLatitude: bookingLat,
-        bookingLongitude: bookingLng,
-        radiusInMeters: 100.0, // Adjust this value as needed (in meters)
         onCheckIn: () async {
           await attendanceController.handleCheckIn();
           await controller.fetchBookingDetails(widget.bookingId);
@@ -1522,9 +1464,11 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
           await attendanceController.handleCheckOut();
           await controller.fetchBookingDetails(widget.bookingId);
         },
-      );
-    });
-  }
+      ),
+    );
+  });
+}
+
 
   // Patient Information Card
   Widget _buildPatientInfoCard(Size size, BookingDetails b) {

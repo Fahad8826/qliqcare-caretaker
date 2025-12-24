@@ -6,6 +6,7 @@ import 'package:qlickcare/Controllers/bookingcontroller.dart';
 import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
 import 'package:qlickcare/Model/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
+import 'package:qlickcare/Services/locationguard.dart';
 import 'package:qlickcare/Services/slidingservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
@@ -219,7 +220,7 @@ class _todoState extends State<todo> {
 
                     SizedBox(height: size.height * 0.03),
 
-                    // Slide to Check-In/Out
+                  
                     // AttendanceSlideButton(
                     //   isCheckedIn: detailsController.isCheckedInToday,
                     //   onCheckIn: () async {
@@ -235,7 +236,21 @@ class _todoState extends State<todo> {
                     //     );
                     //   },
                     // ),
-
+                    buildAttendanceWithLocationGuard(
+                      booking: booking,
+                      onCheckIn: () async {
+                        await attendanceController.handleCheckIn();
+                        await detailsController.fetchBookingDetails(
+                          selectedBookingId.value,
+                        );
+                      },
+                      onCheckOut: () async {
+                        await attendanceController.handleCheckOut();
+                        await detailsController.fetchBookingDetails(
+                          selectedBookingId.value,
+                        );
+                      },
+                    ),
                     SizedBox(height: size.height * 0.02),
                   ],
                 );
@@ -246,6 +261,57 @@ class _todoState extends State<todo> {
       }),
     );
   }
+
+  Widget buildAttendanceWithLocationGuard({
+  required BookingDetails booking,
+  required Future<void> Function() onCheckIn,
+  required Future<void> Function() onCheckOut,
+}) {
+  double? bookingLat;
+  double? bookingLng;
+
+  try {
+    if (booking.latitude.isNotEmpty && booking.longitude.isNotEmpty) {
+      bookingLat = double.parse(booking.latitude);
+      bookingLng = double.parse(booking.longitude);
+    }
+  } catch (e) {
+    debugPrint("❌ Location parse error: $e");
+  }
+
+  // ❌ If location missing
+  if (bookingLat == null || bookingLng == null) {
+    return Center(
+      child: Text(
+        "Location not available for this booking",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.error,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  return LocationGuard(
+    targetLatitude: bookingLat,
+    targetLongitude: bookingLng,
+    radiusInMeters: 100.0,
+    showDistance: true,
+    autoRefresh: false,
+    refreshIntervalSeconds: 30,
+    onLocationStatusChanged: (isWithinRange, distance) {
+      debugPrint(
+        "📍 Todo Page → withinRange: $isWithinRange | distance: $distance",
+      );
+    },
+    child: AttendanceSlideButton(
+      isCheckedIn: detailsController.isCheckedInToday,
+      onCheckIn: onCheckIn,
+      onCheckOut: onCheckOut,
+    ),
+  );
+}
+
 
   Widget _buildPatientSelectionCard(Size size, bool isPortrait) {
     return Obx(() {
