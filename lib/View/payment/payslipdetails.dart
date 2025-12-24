@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Controllers/Model/payslip_model.dart';
+import '../../Model/payslip_model.dart';
 
 class PayslipTile extends StatelessWidget {
   final PayslipModel payslip;

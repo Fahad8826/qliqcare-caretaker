@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:qlickcare/Controllers/Model/attendance_model.dart';
+import 'package:qlickcare/Model/attendance_model.dart';
 import 'package:qlickcare/Services/locationservice.dart';
 import 'package:qlickcare/Services/tokenservice.dart';
 

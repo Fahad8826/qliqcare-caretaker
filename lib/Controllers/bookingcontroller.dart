@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:qlickcare/Controllers/Model/booking_model.dart';
+import 'package:qlickcare/Model/booking_model.dart';
 import 'package:qlickcare/Services/tokenservice.dart';
 
 class BookingController extends GetxController {

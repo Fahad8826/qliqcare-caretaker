@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'Model/profile_model.dart';
+import '../Model/profile_model.dart';
 import '../Services/tokenservice.dart';
 
 class P_Controller extends GetxController {

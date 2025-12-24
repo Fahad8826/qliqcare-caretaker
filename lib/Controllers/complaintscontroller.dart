@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'Model/complain_model.dart';
+import '../Model/complain_model.dart';
 import '../Services/tokenservice.dart';
 
 class ComplaintController extends GetxController {

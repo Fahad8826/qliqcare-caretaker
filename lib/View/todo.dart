@@ -4,11 +4,12 @@ import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/attendancecontroller.dart';
 import 'package:qlickcare/Controllers/bookingcontroller.dart';
 import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
-import 'package:qlickcare/Controllers/Model/bookingdetails_model.dart';
+import 'package:qlickcare/Model/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
 import 'package:qlickcare/Services/slidingservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
+import 'package:qlickcare/Utils/loading.dart';
 
 import 'package:qlickcare/View/Drawer/drawer.dart';
 import 'package:qlickcare/View/listnotification.dart';
@@ -105,10 +106,7 @@ class _todoState extends State<todo> {
       body: Obx(() {
         if (bookingController.isLoading.value) {
           return Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-              strokeWidth: 3,
-            ),
+            child: Loading(),
           );
         }
 
@@ -179,9 +177,7 @@ class _todoState extends State<todo> {
                   return Center(
                     child: Padding(
                       padding: EdgeInsets.all(size.height * 0.05),
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                      child: Loading(),
                     ),
                   );
                 }
@@ -224,21 +220,21 @@ class _todoState extends State<todo> {
                     SizedBox(height: size.height * 0.03),
 
                     // Slide to Check-In/Out
-                    AttendanceSlideButton(
-                      isCheckedIn: detailsController.isCheckedInToday,
-                      onCheckIn: () async {
-                        await attendanceController.handleCheckIn();
-                        await detailsController.fetchBookingDetails(
-                          selectedBookingId.value,
-                        );
-                      },
-                      onCheckOut: () async {
-                        await attendanceController.handleCheckOut();
-                        await detailsController.fetchBookingDetails(
-                          selectedBookingId.value,
-                        );
-                      },
-                    ),
+                    // AttendanceSlideButton(
+                    //   isCheckedIn: detailsController.isCheckedInToday,
+                    //   onCheckIn: () async {
+                    //     await attendanceController.handleCheckIn();
+                    //     await detailsController.fetchBookingDetails(
+                    //       selectedBookingId.value,
+                    //     );
+                    //   },
+                    //   onCheckOut: () async {
+                    //     await attendanceController.handleCheckOut();
+                    //     await detailsController.fetchBookingDetails(
+                    //       selectedBookingId.value,
+                    //     );
+                    //   },
+                    // ),
 
                     SizedBox(height: size.height * 0.02),
                   ],

@@ -27,7 +27,7 @@ class PView extends StatelessWidget {
 
     return Scaffold(
       drawer: const AppDrawer(),
-      backgroundColor: AppColors.screenBackground,
+      backgroundColor: const Color.fromARGB(255, 245, 245, 245),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
@@ -432,7 +432,7 @@ class PView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.1),
+                    // SizedBox(height: screenHeight * 0.1),
                   ],
                 ),
               ),

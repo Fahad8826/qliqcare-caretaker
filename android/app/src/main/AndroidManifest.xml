@@ -24,11 +24,8 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28"/>
 
-    <!-- Camera -->
-    <uses-permission android:name="android.permission.CAMERA"/>
-
     <application
-        android:label="qlickcare"
+        android:label="Qlick Care - Caretaker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

@@ -1,5 +1,5 @@
 
-import 'package:qlickcare/Controllers/Model/attendencestatus_model.dart';
+import 'package:qlickcare/Model/attendencestatus_model.dart';
 
 class BookingDetails {
   final int id;
@@ -104,31 +104,7 @@ class BookingDetails {
   }
 }
 
-// class TodoItem {
-//   final int id;
-//   final String text;
-//   final String? time;
-//   final bool isDefault;
-//   bool isCompleted; // 👈 mutable for UI update
 
-//   TodoItem({
-//     required this.id,
-//     required this.text,
-//     required this.time,
-//     required this.isDefault,
-//     required this.isCompleted,
-//   });
-
-//   factory TodoItem.fromJson(Map<String, dynamic> json) {
-//     return TodoItem(
-//       id: json['id'],
-//       text: json['text'],
-//       time: json['time'],
-//       isDefault: json['is_default'],
-//       isCompleted: json['is_completed'] ?? false, // 👈 ADD THIS
-//     );
-//   }
-// }
 
 class TodoItem {
   final int id;

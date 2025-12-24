@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:qlickcare/Controllers/Model/deleteaccount_model.dart';
+import 'package:qlickcare/Model/deleteaccount_model.dart';
 import 'package:qlickcare/Services/tokenservice.dart';
 import 'package:qlickcare/View/Auth/login.dart';
 

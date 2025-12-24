@@ -1,11 +1,11 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+import java.util.Properties
 
 android {
     namespace = "com.caretaker.qlickcare"
@@ -19,7 +19,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     defaultConfig {
@@ -30,9 +30,25 @@ android {
         versionName = flutter.versionName
     }
 
+    // Load key.properties for signing
+    val keyProperties = Properties().apply {
+        load(rootProject.file("key.properties").inputStream())
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file(keyProperties["storeFile"] as String)
+            storePassword = keyProperties["storePassword"] as String
+            keyAlias = keyProperties["keyAlias"] as String
+            keyPassword = keyProperties["keyPassword"] as String
+        }
+    }
+
     buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

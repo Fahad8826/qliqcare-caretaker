@@ -8,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 
-import 'Model/payslip_model.dart';
+import '../Model/payslip_model.dart';
 import '../Services/tokenservice.dart';
 
 class PayslipController extends GetxController {
