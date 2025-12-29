@@ -8,6 +8,7 @@ import 'package:qlickcare/View/Home/homepage.dart';
 import 'package:qlickcare/View/Booking/bookingview.dart';
 import 'package:qlickcare/View/chat/chatscreen.dart';
 import 'package:qlickcare/View/complaints/complaints.dart';
+import 'package:qlickcare/View/leaveandattendace.dart';
 import 'package:qlickcare/View/payment/paysliplist.dart';
 
 class AppRoutes {
@@ -21,6 +22,7 @@ class AppRoutes {
   static const String chat = '/AllChat';
   static const String bookingView = '/bookingView';
   static const String payslipList = '/payslipList';
+  static const String leaveAttendance = '/leaveAttendance';
 
   static final pages = [
     GetPage(name: splash, page: () => SplashScreen()),
@@ -32,5 +34,6 @@ class AppRoutes {
     GetPage(name: chat, page: () => Chatscreen()), // Placeholder
     GetPage(name: bookingView, page: () => BookingView()),
     GetPage(name: payslipList, page: () => PayslipListView()),
+    GetPage(name: leaveAttendance, page: () => Leaveandattendace()),
   ];
 }

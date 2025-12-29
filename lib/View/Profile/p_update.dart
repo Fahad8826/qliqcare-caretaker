@@ -66,12 +66,57 @@ class EProfile extends StatelessWidget {
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: Stack(
-                        children: [
-                          // Avatar
-                          Obx(() {
-                            try {
-                              if (controller.selectedImage.value != null) {
+                      child: GestureDetector(
+                        onTap: () async {
+                          final XFile? img = await picker.pickImage(
+                            source: ImageSource.gallery,
+                          );
+                          if (img == null) return;
+
+                          controller.selectedImage.value = img.path;
+                        },
+                        child: Stack(
+                          children: [
+                            // Avatar
+                            Obx(() {
+                              try {
+                                if (controller.selectedImage.value != null) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 3,
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 50,
+                                      backgroundImage: FileImage(
+                                        File(controller.selectedImage.value!),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                if ((profile.profilePicture?.trim().isNotEmpty ??
+                                    false)) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 3,
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 50,
+                                      backgroundImage: NetworkImage(
+                                        profile.profilePicture!.trim(),
+                                      ),
+                                    ),
+                                  );
+                                }
+
                                 return Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
@@ -82,15 +127,15 @@ class EProfile extends StatelessWidget {
                                   ),
                                   child: CircleAvatar(
                                     radius: 50,
-                                    backgroundImage: FileImage(
-                                      File(controller.selectedImage.value!),
+                                    backgroundColor: Colors.grey.shade200,
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.grey,
                                     ),
                                   ),
                                 );
-                              }
-
-                              if ((profile.profilePicture?.trim().isNotEmpty ??
-                                  false)) {
+                              } catch (e) {
                                 return Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
@@ -99,82 +144,31 @@ class EProfile extends StatelessWidget {
                                       width: 3,
                                     ),
                                   ),
-                                  child: CircleAvatar(
+                                  child: const CircleAvatar(
                                     radius: 50,
-                                    backgroundImage: NetworkImage(
-                                      profile.profilePicture!.trim(),
-                                    ),
+                                    backgroundColor: Colors.grey,
+                                    child: Icon(Icons.error, color: Colors.white),
                                   ),
                                 );
                               }
+                            }),
 
-                              return Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 50,
-                                  backgroundColor: Colors.grey.shade200,
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              );
-                            } catch (e) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: const CircleAvatar(
-                                  radius: 50,
-                                  backgroundColor: Colors.grey,
-                                  child: Icon(Icons.error, color: Colors.white),
-                                ),
-                              );
-                            }
-                          }),
-
-                          // Camera Button
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: InkWell(
-                              onTap: () async {
-                                final XFile? img = await picker.pickImage(
-                                  source: ImageSource.gallery,
-                                );
-                                if (img == null) return;
-                                controller.selectedImage.value = img.path;
-                              },
+                            // Edit Icon Overlay - centered on avatar
+                            Positioned.fill(
                               child: Container(
-                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2.5,
-                                  ),
+                                  color: Colors.black.withOpacity(0.4),
                                 ),
                                 child: const Icon(
                                   Icons.camera_alt,
                                   color: Colors.white,
-                                  size: 28,
+                                  size: 32,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -359,7 +353,7 @@ class EProfile extends StatelessWidget {
                               ? const SizedBox(
                                   height: 22,
                                   width: 22,
-                                  child:Loading()
+                                  child: Loading(),
                                 )
                               : const Text(
                                   "Save Changes",
@@ -446,42 +440,48 @@ class EProfile extends StatelessWidget {
         children: [
           Text(label, style: AppTextStyles.heading2.copyWith(fontSize: 15)),
           const SizedBox(height: 6),
-          DropdownButtonFormField<T>(
-            value: value,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: AppColors.background,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                value: value,
+                isExpanded: true,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+                dropdownColor: AppColors.background,
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                items: items
+                    .map(
+                      (e) => DropdownMenuItem<T>(
+                        value: e["value"] as T,
+                        child: Text(
+                          e["label"] as String,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: onChanged,
               ),
             ),
-            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-            icon: const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.primary,
-            ),
-            items: items
-                .map(
-                  (e) => DropdownMenuItem<T>(
-                    value: e["value"] as T,
-                    child: Text(e["label"] as String),
-                  ),
-                )
-                .toList(),
-            onChanged: onChanged,
           ),
         ],
       ),

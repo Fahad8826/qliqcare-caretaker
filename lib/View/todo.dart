@@ -221,31 +221,17 @@ class _todoState extends State<todo> {
                     SizedBox(height: size.height * 0.03),
 
                   
-                    // AttendanceSlideButton(
-                    //   isCheckedIn: detailsController.isCheckedInToday,
-                    //   onCheckIn: () async {
-                    //     await attendanceController.handleCheckIn();
-                    //     await detailsController.fetchBookingDetails(
-                    //       selectedBookingId.value,
-                    //     );
-                    //   },
-                    //   onCheckOut: () async {
-                    //     await attendanceController.handleCheckOut();
-                    //     await detailsController.fetchBookingDetails(
-                    //       selectedBookingId.value,
-                    //     );
-                    //   },
-                    // ),
+                    
                     buildAttendanceWithLocationGuard(
                       booking: booking,
                       onCheckIn: () async {
-                        await attendanceController.handleCheckIn();
+                        await attendanceController.handleCheckIn(booking.id);
                         await detailsController.fetchBookingDetails(
                           selectedBookingId.value,
                         );
                       },
                       onCheckOut: () async {
-                        await attendanceController.handleCheckOut();
+                        await attendanceController.handleCheckOut(booking.id);
                         await detailsController.fetchBookingDetails(
                           selectedBookingId.value,
                         );
@@ -267,6 +253,19 @@ class _todoState extends State<todo> {
   required Future<void> Function() onCheckIn,
   required Future<void> Function() onCheckOut,
 }) {
+  // ✅ If already checked out
+  if (detailsController.isCheckedOutToday) {
+    return Center(
+      child: Text(
+        "Attendance completed for today",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.success,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   double? bookingLat;
   double? bookingLng;
 
@@ -279,7 +278,7 @@ class _todoState extends State<todo> {
     debugPrint("❌ Location parse error: $e");
   }
 
-  // ❌ If location missing
+  // ❌ Location missing
   if (bookingLat == null || bookingLng == null) {
     return Center(
       child: Text(
@@ -295,7 +294,7 @@ class _todoState extends State<todo> {
   return LocationGuard(
     targetLatitude: bookingLat,
     targetLongitude: bookingLng,
-    radiusInMeters: 100.0,
+    radiusInMeters: 1000000.0,
     showDistance: true,
     autoRefresh: false,
     refreshIntervalSeconds: 30,
@@ -311,6 +310,7 @@ class _todoState extends State<todo> {
     ),
   );
 }
+
 
 
   Widget _buildPatientSelectionCard(Size size, bool isPortrait) {

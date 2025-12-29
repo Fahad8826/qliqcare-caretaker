@@ -67,7 +67,7 @@ class BookingController extends GetxController {
 
     try {
       var headers = {'Authorization': 'Bearer $token'};
-      var url = Uri.parse("$baseUrl/api/caretaker/bookings/");
+      var url = Uri.parse("$baseUrl/api/caretaker/bookings/ongoing/");
       var response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {

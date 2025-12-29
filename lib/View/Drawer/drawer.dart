@@ -132,8 +132,13 @@ class AppDrawer extends StatelessWidget {
                 },
               ),
 
-            
-
+              drawerItem(
+                icon: FontAwesomeIcons.calendar,
+                title: "Leave & Attendance",
+                onTap: () {
+                  Get.toNamed('/leaveAttendance');
+                },
+              ),
               drawerItem(
                 icon: FontAwesomeIcons.fileLines,
                 title: "Privacy Policy",

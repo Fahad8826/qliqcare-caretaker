@@ -138,21 +138,23 @@ class OnboardingScreen extends StatelessWidget {
                     // ---------- Register Account Button ----------
                     TextButton(
                       onPressed: () async {
-                        final baseUrl = dotenv.env['BASE_URL'] ?? '';
-                        final url =
-                            '$baseUrl/api/caretaker/register-page/'; // replace later
-                        if (await canLaunchUrl(Uri.parse(url))) {
-                          await launchUrl(
-                            Uri.parse(url),
-                            mode: LaunchMode.externalApplication,
-                          );
+                        final Uri uri = Uri.parse(
+                          'https://qliqcare.in/api/caretaker/register-page/',
+                        );
+
+                        final bool launched = await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+
+                        if (!launched) {
+                          debugPrint('Failed to open URL');
                         }
                       },
-                      child: Text(
-                        "Register Account",
+                      child: const Text(
+                        'Register Account',
                         style: TextStyle(
                           color: Colors.white70,
-                          fontSize: isTablet ? 18 : 16,
                           decoration: TextDecoration.underline,
                         ),
                       ),

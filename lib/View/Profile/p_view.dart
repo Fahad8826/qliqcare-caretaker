@@ -128,7 +128,7 @@ class PView extends StatelessWidget {
                 ],
               ),
 
-              SizedBox(height: screenHeight * 0.09),
+              SizedBox(height: screenHeight * 0.07),
 
               /// ================== NAME & INFO ==================
               Padding(
@@ -179,6 +179,12 @@ class PView extends StatelessWidget {
 
                         Text(
                           profile.locationName ?? 'N/A',
+                          style: AppTextStyles.body.copyWith(
+                            fontSize: isSmallScreen ? 12 : 14,
+                          ),
+                        ),
+                        Text(
+                          profile.gender ?? 'N/A',
                           style: AppTextStyles.body.copyWith(
                             fontSize: isSmallScreen ? 12 : 14,
                           ),

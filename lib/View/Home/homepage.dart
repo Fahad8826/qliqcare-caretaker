@@ -30,8 +30,9 @@ class _HomePageState extends State<HomePage> {
   final P_Controller profileController = Get.put(P_Controller());
 
   final BookingController ongoingBookingController = Get.put(
-    BookingController(),
-  );
+  BookingController(),
+  tag: 'homepage', // ✅ Add this tag
+);
 
   @override
   void initState() {
