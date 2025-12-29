@@ -5,7 +5,7 @@ import 'package:qlickcare/Controllers/bookingcontroller.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
-import 'package:qlickcare/View/Booking/bookingdetailedview.dart';
+import 'package:qlickcare/View/Drawer/Booking/bookingdetailedview.dart';
 
 class BookingView extends StatelessWidget {
   // ✅ Use tagged controller to isolate from homepage

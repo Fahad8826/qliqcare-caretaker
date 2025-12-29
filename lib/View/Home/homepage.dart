@@ -9,7 +9,7 @@ import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/View/Drawer/drawer.dart';
-import 'package:qlickcare/View/Booking/bookingdetailedview.dart';
+import 'package:qlickcare/View/Drawer/Booking/bookingdetailedview.dart';
 import 'package:qlickcare/View/chat/chatdetailscreen.dart';
 import 'package:qlickcare/View/listnotification.dart';
 

@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/deleteaccount.dart';
 import 'package:qlickcare/Controllers/logoutcontroller.dart';
+import 'package:qlickcare/Services/logoutdailoge.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/View/Drawer/drawer.dart';
@@ -374,7 +375,7 @@ class PView extends StatelessWidget {
                           child: SizedBox(
                             height: isSmallScreen ? 35 : 40,
                             child: OutlinedButton(
-                              onPressed: () => _showLogoutDialog(context),
+                              onPressed: () => confirmLogout(context),
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(
                                   color: Colors.red,
@@ -452,119 +453,7 @@ class PView extends StatelessWidget {
   // -------------------------------------------------------------------------------------
   // LOGOUT DIALOG
   // -------------------------------------------------------------------------------------
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.logout_rounded,
-                    color: Colors.red,
-                    size: 34,
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                // Title
-                Text(
-                  'Logout',
-                  style: AppTextStyles.heading2.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Message
-                Text(
-                  'Are you sure you want to logout?',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textSecondary,
-                    fontSize: 14.5,
-                    height: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Get.back(),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Get.back();
-                          logoutController.logout();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          backgroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Logout',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  
 
   // -------------------------------------------------------------------------------------
   // HELPER WIDGETS

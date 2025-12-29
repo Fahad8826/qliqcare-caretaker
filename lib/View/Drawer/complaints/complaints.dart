@@ -4,9 +4,9 @@ import 'package:get/get.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/loading.dart';
 
-import '../../Controllers/complaintscontroller.dart';
+import '../../../Controllers/complaintscontroller.dart';
 import 'complaintview.dart';
-import '../../Utils/appcolors.dart';
+import '../../../Utils/appcolors.dart';
 
 class ComplaintsPage extends StatefulWidget {
   @override

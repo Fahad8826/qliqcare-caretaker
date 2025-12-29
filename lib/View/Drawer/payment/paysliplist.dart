@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
-import '../../Controllers/payslip_controller.dart';
+import '../../../Controllers/payslip_controller.dart';
 
 class PayslipListView extends StatelessWidget {
   PayslipListView({super.key});

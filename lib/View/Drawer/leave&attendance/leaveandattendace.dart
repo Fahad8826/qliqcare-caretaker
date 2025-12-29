@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:qlickcare/Controllers/attendance_statscontroller.dart';
 import 'package:qlickcare/Controllers/leavecontroller.dart';
 import 'package:qlickcare/Utils/appbar.dart';
-import '../Utils/appcolors.dart';
-import '../Utils/loading.dart';
+import 'package:qlickcare/View/Drawer/leave&attendance/leave_stats.dart';
+import '../../../Utils/appcolors.dart';
+import '../../../Utils/loading.dart';
 
 class Leaveandattendace extends StatefulWidget {
   const Leaveandattendace({super.key});
@@ -29,6 +30,7 @@ class _LeaveandattendaceState extends State<Leaveandattendace> {
   void initState() {
     super.initState();
     statsController.fetchStats();
+    leaveController.fetchLeaveStats();
   }
 
   Future<void> _pickDateRange() async {
@@ -190,6 +192,8 @@ class _LeaveandattendaceState extends State<Leaveandattendace> {
 
             SizedBox(height: size.height * 0.03),
 
+            
+            LeaveStatsSection(),
             /// =======================
             /// APPLY LEAVE SECTION
             /// =======================
@@ -371,11 +375,12 @@ class _LeaveandattendaceState extends State<Leaveandattendace> {
                       ),
                     );
                   }),
+
+                 
+                  
                 ],
               ),
             ),
-
-            SizedBox(height: size.height * 0.02),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qlickcare/Controllers/logoutcontroller.dart';
 import 'package:qlickcare/Controllers/whtasappcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
+import 'package:qlickcare/Services/logoutdailoge.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -156,7 +157,7 @@ class AppDrawer extends StatelessWidget {
                 icon: FontAwesomeIcons.arrowRightFromBracket,
                 title: "Logout",
                 color: AppColors.error,
-                onTap: () => confirmLogout(),
+                onTap: () => confirmLogout(context),
               ),
 
               drawerItem(
@@ -206,53 +207,5 @@ class AppDrawer extends StatelessWidget {
   }
 
   // ---------------- LOGOUT CONFIRMATION ----------------
-  void confirmLogout() {
-    final logoutController = Get.put(LogoutController());
-
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
-        title: Text(
-          "Logout",
-          style: AppTextStyles.heading2.copyWith(color: AppColors.textPrimary),
-        ),
-
-        content: Text(
-          "Are you sure you want to logout?",
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-        ),
-
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-
-        actions: [
-          // Cancel Button
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              "Cancel",
-              style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-
-          // Logout Button
-          TextButton(
-            onPressed: () {
-              Get.back();
-              logoutController.logout();
-            },
-            child: Text(
-              "Logout",
-              style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 }

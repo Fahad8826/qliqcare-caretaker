@@ -350,11 +350,7 @@ class EProfile extends StatelessWidget {
                             elevation: 0,
                           ),
                           child: controller.isUpdating.value
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: Loading(),
-                                )
+                              ? const Loading()
                               : const Text(
                                   "Save Changes",
                                   style: TextStyle(

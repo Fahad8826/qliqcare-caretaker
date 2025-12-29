@@ -7,6 +7,7 @@ enum AttendanceDayStatus {
   checkedOut,
   absent,
   upcoming,
+  onLeave,
 }
 
 class AttendanceCalendar extends StatelessWidget {
@@ -158,6 +159,7 @@ class AttendanceCalendar extends StatelessWidget {
         _legendItem(Colors.green, "Checked Out"),
         _legendItem(Colors.red, "Absent"),
         _legendItem(Colors.grey, "Upcoming"),
+        _legendItem(Colors.purple, "On Leave"),
       ],
     );
   }
@@ -198,6 +200,8 @@ class AttendanceCalendar extends StatelessWidget {
 
       case AttendanceDayStatus.absent:
         return Colors.red;
+      case AttendanceDayStatus.onLeave:
+        return Colors.purple;
 
       case AttendanceDayStatus.upcoming:
         return Colors.grey;

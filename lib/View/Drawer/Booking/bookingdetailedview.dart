@@ -3,15 +3,16 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/attendancecontroller.dart';
 import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
-import 'package:qlickcare/Model/attendencestatus_model.dart';
+import 'package:qlickcare/Model/attendance/attendencestatus_model.dart';
 import 'package:qlickcare/Model/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
 import 'package:qlickcare/Services/locationguard.dart';
 import 'package:qlickcare/Services/locationservice.dart';
-import 'package:qlickcare/Services/slidingservice.dart'; 
+import 'package:qlickcare/Services/slidingservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
+import 'package:qlickcare/View/Drawer/Booking/bookingattendaces.dart';
 import 'package:qlickcare/View/listnotification.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -46,7 +47,6 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       await _fetchCaretakerLocation();
     });
   }
-
 
   // Fetch caretaker location from profile
   Future<void> _fetchCaretakerLocation() async {
@@ -177,6 +177,9 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               case "ABSENT":
                 data[day] = AttendanceDayStatus.absent;
                 break;
+              case "ON_LEAVE":
+                data[day] = AttendanceDayStatus.onLeave;
+                break;
 
               default:
                 data[day] = AttendanceDayStatus.upcoming;
@@ -210,8 +213,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
 
               // Attendance Summary Card
               if (b.attendanceSummary != null)
-                _buildAttendanceSummaryCard(size, b.attendanceSummary!),
-
+                // In your BookingDetailsPage
+                EnhancedAttendanceSummary(booking: b),
               SizedBox(height: size.height * 0.03),
 
               // Today's Tasks
@@ -261,94 +264,88 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 
- 
-Widget _buildAttendanceSlider(Size size, BookingDetails b) {
-  return Obx(() {
-    final bool isCheckedOut = controller.isCheckedOutToday;
+  Widget _buildAttendanceSlider(Size size, BookingDetails b) {
+    return Obx(() {
+      final bool isCheckedOut = controller.isCheckedOutToday;
 
-    if (isCheckedOut) {
-      return Center(
-        child: Text(
-          "Attendance completed for today",
-          style: AppTextStyles.small.copyWith(
-            color: AppColors.success,
-            fontWeight: FontWeight.w600,
+      if (isCheckedOut) {
+        return Center(
+          child: Text(
+            "Attendance completed for today",
+            style: AppTextStyles.small.copyWith(
+              color: AppColors.success,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      );
-    }
-
-    // Parse booking coordinates
-    double? bookingLat;
-    double? bookingLng;
-
-    try {
-      if (b.latitude.isNotEmpty && b.longitude.isNotEmpty) {
-        bookingLat = double.parse(b.latitude);
-        bookingLng = double.parse(b.longitude);
+        );
       }
-    } catch (e) {
-      debugPrint("❌ Error parsing booking coordinates: $e");
-    }
 
-    // Check if booking coordinates are available
-    if (bookingLat == null || bookingLng == null) {
-      return Center(
-        child: Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.location_off,
-                color: AppColors.error,
-                size: 32,
-              ),
-              SizedBox(height: 8),
-              Text(
-                "Location not available for this booking",
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
+      // Parse booking coordinates
+      double? bookingLat;
+      double? bookingLng;
+
+      try {
+        if (b.latitude.isNotEmpty && b.longitude.isNotEmpty) {
+          bookingLat = double.parse(b.latitude);
+          bookingLng = double.parse(b.longitude);
+        }
+      } catch (e) {
+        debugPrint("❌ Error parsing booking coordinates: $e");
+      }
+
+      // Check if booking coordinates are available
+      if (bookingLat == null || bookingLng == null) {
+        return Center(
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.location_off, color: AppColors.error, size: 32),
+                SizedBox(height: 8),
+                Text(
+                  "Location not available for this booking",
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
+        );
+      }
+
+      // Wrap AttendanceSlideButton with LocationGuard
+      return LocationGuard(
+        targetLatitude: bookingLat,
+        targetLongitude: bookingLng,
+        radiusInMeters: 1000000.0, // Adjust as needed
+        showDistance: true,
+        autoRefresh: false, // Set to true if you want periodic location updates
+        refreshIntervalSeconds: 30,
+        onLocationStatusChanged: (isWithinRange, distance) {
+          debugPrint("Location status: $isWithinRange, Distance: $distance");
+        },
+        child: AttendanceSlideButton(
+          isCheckedIn: controller.isCheckedInToday,
+          onCheckIn: () async {
+            await attendanceController.handleCheckIn(widget.bookingId);
+            await controller.fetchBookingDetails(widget.bookingId);
+          },
+          onCheckOut: () async {
+            await attendanceController.handleCheckOut(widget.bookingId);
+            await controller.fetchBookingDetails(widget.bookingId);
+          },
         ),
       );
-    }
-
-    // Wrap AttendanceSlideButton with LocationGuard
-    return LocationGuard(
-      targetLatitude: bookingLat,
-      targetLongitude: bookingLng,
-      radiusInMeters: 1000000.0, // Adjust as needed
-      showDistance: true,
-      autoRefresh: false, // Set to true if you want periodic location updates
-      refreshIntervalSeconds: 30,
-      onLocationStatusChanged: (isWithinRange, distance) {
-        debugPrint("Location status: $isWithinRange, Distance: $distance");
-      },
-      child: AttendanceSlideButton(
-        isCheckedIn: controller.isCheckedInToday,
-        onCheckIn: () async {
-          await attendanceController.handleCheckIn(widget.bookingId);
-          await controller.fetchBookingDetails(widget.bookingId);
-        },
-        onCheckOut: () async {
-          await attendanceController.handleCheckOut(widget.bookingId);
-          await controller.fetchBookingDetails(widget.bookingId);
-        },
-      ),
-    );
-  });
-}
-
+    });
+  }
 
   // Patient Information Card
   Widget _buildPatientInfoCard(Size size, BookingDetails b) {
@@ -515,26 +512,26 @@ Widget _buildAttendanceSlider(Size size, BookingDetails b) {
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                padding: EdgeInsets.all(20),
-                                color: Colors.white,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.broken_image,
-                                      size: 60,
-                                      color: AppColors.error,
+                                    padding: EdgeInsets.all(20),
+                                    color: Colors.white,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image,
+                                          size: 60,
+                                          color: AppColors.error,
+                                        ),
+                                        SizedBox(height: 10),
+                                        Text(
+                                          "Failed to load image",
+                                          style: TextStyle(
+                                            color: AppColors.error,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    SizedBox(height: 10),
-                                    Text(
-                                      "Failed to load image",
-                                      style: TextStyle(
-                                        color: AppColors.error,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                  ),
                             ),
                           ),
                         ),
@@ -569,9 +566,7 @@ Widget _buildAttendanceSlider(Size size, BookingDetails b) {
                     fit: BoxFit.cover,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
-                      return Center(
-                        child: Loading(),
-                      );
+                      return Center(child: Loading());
                     },
                     errorBuilder: (context, error, stackTrace) => Center(
                       child: Column(
@@ -614,7 +609,8 @@ Widget _buildAttendanceSlider(Size size, BookingDetails b) {
   // Customer Contact Card
   Widget _buildCustomerContactCard(Size size, BookingDetails b) {
     // Check if any customer data exists
-    final hasCustomerData = b.customerName.isNotEmpty ||
+    final hasCustomerData =
+        b.customerName.isNotEmpty ||
         b.customerPhone.isNotEmpty ||
         b.customerEmail.isNotEmpty;
 
@@ -783,134 +779,9 @@ Widget _buildAttendanceSlider(Size size, BookingDetails b) {
     }
   }
 
-  // Attendance Summary Card
-  Widget _buildAttendanceSummaryCard(Size size, AttendanceSummary summary) {
-    return Container(
-      padding: EdgeInsets.all(size.width * 0.04),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Attendance Summary",
-            style: AppTextStyles.heading2.copyWith(
-              fontSize: size.width * 0.04,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          SizedBox(height: size.height * 0.02),
+  
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSummaryItem(
-                size,
-                "Total Days",
-                summary.totalDays.toString(),
-                Colors.blue,
-                FontAwesomeIcons.calendar,
-              ),
-              _buildSummaryItem(
-                size,
-                "Present",
-                summary.presentDays.toString(),
-                AppColors.success,
-                FontAwesomeIcons.circleCheck,
-              ),
-              _buildSummaryItem(
-                size,
-                "Absent",
-                summary.absentDays.toString(),
-                AppColors.error,
-                FontAwesomeIcons.circleXmark,
-              ),
-            ],
-          ),
-
-          SizedBox(height: size.height * 0.015),
-
-          // Attendance Rate Progress Bar
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Attendance Rate",
-                    style: AppTextStyles.small.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  Text(
-                    "${((summary.presentDays / summary.totalDays) * 100).toStringAsFixed(1)}%",
-                    style: AppTextStyles.small.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: summary.presentDays / summary.totalDays,
-                  backgroundColor: AppColors.textSecondary.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
-                  minHeight: 8,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    Size size,
-    String label,
-    String value,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(size.width * 0.03),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        SizedBox(height: 8),
-        Text(
-          value,
-          style: AppTextStyles.heading2.copyWith(
-            fontSize: size.width * 0.05,
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: AppTextStyles.small.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
-    );
-  }
+  
 
   Widget _buildInfoRow(Size size, IconData icon, String label, String value) {
     return Padding(

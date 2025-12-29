@@ -3,8 +3,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/loading.dart';
-import '../../Controllers/complaintscontroller.dart';
-import '../../Utils/appcolors.dart';
+import '../../../Controllers/complaintscontroller.dart';
+import '../../../Utils/appcolors.dart';
 
 class ComplaintDetailPage extends StatefulWidget {
   final int id;

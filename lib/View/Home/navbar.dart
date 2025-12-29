@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:qlickcare/Controllers/locationcontroller.dart';
 import 'package:qlickcare/Services/locationservice.dart';
 import 'package:qlickcare/Services/notification_services.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
@@ -25,7 +24,6 @@ class _MainHomeState extends State<MainHome> {
   // Pages initialized inline → avoids LateInitializationError
   final List<Widget> pages = [HomePage(), todo(), Chatscreen(), PView()];
   final notificationService = NotificationService();
-  final locationController = Get.put(LocationController());
 
   @override
   void initState() {
@@ -62,7 +60,7 @@ class _MainHomeState extends State<MainHome> {
   Future<void> _checkAndRequestPermissions() async {
     // Check if permission is already granted
     bool hasPermission = await LocationService.hasLocationPermission();
-    
+
     if (!hasPermission) {
       // Show dialog explaining why you need permission
       _showPermissionDialog();
@@ -77,10 +75,7 @@ class _MainHomeState extends State<MainHome> {
           "QlickCare needs your location to track attendance and provide location-based services.",
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("Cancel"),
-          ),
+          TextButton(onPressed: () => Get.back(), child: Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
               Get.back();
@@ -92,8 +87,6 @@ class _MainHomeState extends State<MainHome> {
       ),
     );
   }
-
-
 
   void _refreshPage(int index) {
     switch (index) {

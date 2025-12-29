@@ -5,11 +5,11 @@ import 'package:qlickcare/View/Home/navbar.dart';
 import 'package:qlickcare/View/Splash/splashscreen.dart';
 import 'package:qlickcare/View/Onboarding/onboardingscreens.dart';
 import 'package:qlickcare/View/Home/homepage.dart';
-import 'package:qlickcare/View/Booking/bookingview.dart';
+import 'package:qlickcare/View/Drawer/Booking/bookingview.dart';
 import 'package:qlickcare/View/chat/chatscreen.dart';
-import 'package:qlickcare/View/complaints/complaints.dart';
-import 'package:qlickcare/View/leaveandattendace.dart';
-import 'package:qlickcare/View/payment/paysliplist.dart';
+import 'package:qlickcare/View/Drawer/complaints/complaints.dart';
+import 'package:qlickcare/View/Drawer/leave&attendance/leaveandattendace.dart';
+import 'package:qlickcare/View/Drawer/payment/paysliplist.dart';
 
 class AppRoutes {
   static const splash = '/';
