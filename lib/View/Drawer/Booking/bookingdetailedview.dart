@@ -3,7 +3,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/attendancecontroller.dart';
 import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
-import 'package:qlickcare/Model/attendance/attendencestatus_model.dart';
 import 'package:qlickcare/Model/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
 import 'package:qlickcare/Services/locationguard.dart';
@@ -13,6 +12,7 @@ import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/View/Drawer/Booking/bookingattendaces.dart';
+import 'package:qlickcare/View/Drawer/Booking/taskstatus_widget.dart';
 import 'package:qlickcare/View/listnotification.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -218,6 +218,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               SizedBox(height: size.height * 0.03),
 
               // Today's Tasks
+              
               Text(
                 "Today's Tasks",
                 style: AppTextStyles.subtitle.copyWith(
@@ -228,8 +229,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               ),
 
               SizedBox(height: size.height * 0.015),
-
-              _buildTaskList(size, b.todos),
+              buildCaretakerStatusMessage(b),
+              _buildTaskList(size, b.todos, detailsController.isOnLeaveToday, b.endDate),
 
               SizedBox(height: size.height * 0.03),
 
@@ -267,6 +268,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   Widget _buildAttendanceSlider(Size size, BookingDetails b) {
     return Obx(() {
       final bool isCheckedOut = controller.isCheckedOutToday;
+      final bool isleaveToday = controller.isOnLeaveToday;
 
       if (isCheckedOut) {
         return Center(
@@ -274,6 +276,28 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             "Attendance completed for today",
             style: AppTextStyles.small.copyWith(
               color: AppColors.success,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      }
+      if (isleaveToday) {
+        return Center(
+          child: Text(
+            "You are on leave today",
+            style: AppTextStyles.small.copyWith(
+              color: AppColors.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      }
+      if (b.endDate.isNotEmpty && isBookingCompleted(b.endDate)) {
+        return Center(
+          child: Text(
+            "Booking period is completed",
+            style: AppTextStyles.small.copyWith(
+              color: AppColors.error,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -779,9 +803,21 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     }
   }
 
-  
+  bool isBookingCompleted(String endDateStr) {
+    try {
+      final endDate = DateTime.parse(endDateStr);
+      final today = DateTime.now();
 
-  
+      // Compare only date (remove time)
+      final end = DateTime(endDate.year, endDate.month, endDate.day);
+      final now = DateTime(today.year, today.month, today.day);
+
+      return end.isBefore(now);
+    } catch (e) {
+      debugPrint("Date parse error: $e");
+      return false;
+    }
+  }
 
   Widget _buildInfoRow(Size size, IconData icon, String label, String value) {
     return Padding(
@@ -827,30 +863,14 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       ),
     );
   }
-
-  Widget _buildTaskList(Size size, List<TodoItem> todos) {
-    if (todos.isEmpty) {
-      return Container(
-        padding: EdgeInsets.all(size.width * 0.04),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            "No tasks for today",
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-          ),
-        ),
-      );
-    }
+Widget _buildTaskList(
+    Size size,
+    List<TodoItem> todos,
+    bool isOnLeaveToday,
+    String endDate,
+  ) {
+    // Disable actions if on leave or booking is completed
+    final bool disableActions = isOnLeaveToday || isBookingCompleted(endDate);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -883,6 +903,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                /// TASK TEXT
                 Expanded(
                   child: Text(
                     task.text ?? "No Task",
@@ -894,6 +915,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                     ),
                   ),
                 ),
+
+                /// TIME + CHECK ICON
                 Row(
                   children: [
                     Text(
@@ -904,18 +927,28 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
                       ),
                     ),
                     SizedBox(width: size.width * 0.02),
+
+                    /// CLICKABLE ICON
                     GestureDetector(
-                      onTap: () {
-                        controller.updateTodoStatus(task.id, !task.isCompleted);
-                      },
-                      child: Icon(
-                        isCompleted
-                            ? FontAwesomeIcons.solidCircleCheck
-                            : FontAwesomeIcons.circle,
-                        color: isCompleted
-                            ? AppColors.success
-                            : AppColors.textSecondary.withOpacity(0.5),
-                        size: 20,
+                      onTap: disableActions
+                          ? null
+                          : () {
+                              detailsController.updateTodoStatus(
+                                task.id,
+                                !task.isCompleted,
+                              );
+                            },
+                      child: Opacity(
+                        opacity: disableActions ? 0.4 : 1.0,
+                        child: Icon(
+                          isCompleted
+                              ? FontAwesomeIcons.solidCircleCheck
+                              : FontAwesomeIcons.circle,
+                          color: isCompleted
+                              ? AppColors.success
+                              : AppColors.textSecondary.withOpacity(0.5),
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
@@ -927,4 +960,103 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       ),
     );
   }
+  // Widget _buildTaskList(Size size, List<TodoItem> todos) {
+  //   if (todos.isEmpty) {
+  //     return Container(
+  //       padding: EdgeInsets.all(size.width * 0.04),
+  //       decoration: BoxDecoration(
+  //         color: AppColors.background,
+  //         borderRadius: BorderRadius.circular(16),
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: Colors.black.withOpacity(0.05),
+  //             blurRadius: 10,
+  //             offset: const Offset(0, 2),
+  //           ),
+  //         ],
+  //       ),
+  //       child: Center(
+  //         child: Text(
+  //           "No tasks for today",
+  //           style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+  //         ),
+  //       ),
+  //     );
+  //   }
+
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(
+  //       vertical: size.height * 0.015,
+  //       horizontal: size.width * 0.02,
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: AppColors.background,
+  //       borderRadius: BorderRadius.circular(16),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: const Offset(0, 2),
+  //         ),
+  //       ],
+  //     ),
+  //     child: ListView.separated(
+  //       shrinkWrap: true,
+  //       physics: const NeverScrollableScrollPhysics(),
+  //       itemCount: todos.length,
+  //       separatorBuilder: (context, index) =>
+  //           const Divider(height: 1, color: Color(0xFFEAEAEA)),
+  //       itemBuilder: (context, index) {
+  //         final task = todos[index];
+  //         final bool isCompleted = task.isCompleted;
+
+  //         return Padding(
+  //           padding: const EdgeInsets.symmetric(vertical: 8.0),
+  //           child: Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //             children: [
+  //               Expanded(
+  //                 child: Text(
+  //                   task.text ?? "No Task",
+  //                   style: AppTextStyles.body.copyWith(
+  //                     color: AppColors.textPrimary,
+  //                     decoration: isCompleted
+  //                         ? TextDecoration.lineThrough
+  //                         : TextDecoration.none,
+  //                   ),
+  //                 ),
+  //               ),
+  //               Row(
+  //                 children: [
+  //                   Text(
+  //                     task.time ?? "N/A",
+  //                     style: AppTextStyles.small.copyWith(
+  //                       color: AppColors.textSecondary,
+  //                       fontWeight: FontWeight.w500,
+  //                     ),
+  //                   ),
+  //                   SizedBox(width: size.width * 0.02),
+  //                   GestureDetector(
+  //                     onTap: () {
+  //                       controller.updateTodoStatus(task.id, !task.isCompleted);
+  //                     },
+  //                     child: Icon(
+  //                       isCompleted
+  //                           ? FontAwesomeIcons.solidCircleCheck
+  //                           : FontAwesomeIcons.circle,
+  //                       color: isCompleted
+  //                           ? AppColors.success
+  //                           : AppColors.textSecondary.withOpacity(0.5),
+  //                       size: 20,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ],
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 }

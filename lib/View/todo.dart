@@ -11,6 +11,7 @@ import 'package:qlickcare/Services/slidingservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
+import 'package:qlickcare/View/Drawer/Booking/taskstatus_widget.dart';
 
 import 'package:qlickcare/View/Drawer/drawer.dart';
 import 'package:qlickcare/View/listnotification.dart';
@@ -205,8 +206,15 @@ class _todoState extends State<todo> {
 
                     SizedBox(height: size.height * 0.015),
 
+                    buildCaretakerStatusMessage(booking),
+
                     // Task List
-                    _buildTaskList(size, booking.todos),
+                    _buildTaskList(
+                      size,
+                      booking.todos,
+                      detailsController.isOnLeaveToday,
+                      booking.endDate,
+                    ),
 
                     SizedBox(height: size.height * 0.03),
 
@@ -262,6 +270,28 @@ class _todoState extends State<todo> {
         ),
       );
     }
+    if (detailsController.isOnLeaveToday) {
+      return Center(
+        child: Text(
+          "You are on leave today",
+          style: AppTextStyles.small.copyWith(
+            color: AppColors.success,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+    if (booking.endDate.isNotEmpty && isBookingCompleted(booking.endDate)) {
+      return Center(
+        child: Text(
+          "Booking period is completed",
+          style: AppTextStyles.small.copyWith(
+            color: AppColors.error,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
 
     double? bookingLat;
     double? bookingLng;
@@ -306,6 +336,22 @@ class _todoState extends State<todo> {
         onCheckOut: onCheckOut,
       ),
     );
+  }
+
+  bool isBookingCompleted(String endDateStr) {
+    try {
+      final endDate = DateTime.parse(endDateStr);
+      final today = DateTime.now();
+
+      // Compare only date (remove time)
+      final end = DateTime(endDate.year, endDate.month, endDate.day);
+      final now = DateTime(today.year, today.month, today.day);
+
+      return end.isBefore(now);
+    } catch (e) {
+      debugPrint("Date parse error: $e");
+      return false;
+    }
   }
 
   Widget _buildPatientSelectionCard(Size size, bool isPortrait) {
@@ -542,7 +588,15 @@ class _todoState extends State<todo> {
     );
   }
 
-  Widget _buildTaskList(Size size, List<TodoItem> todos) {
+  Widget _buildTaskList(
+    Size size,
+    List<TodoItem> todos,
+    bool isOnLeaveToday,
+    String endDate,
+  ) {
+    // Disable actions if on leave or booking is completed
+    final bool disableActions = isOnLeaveToday || isBookingCompleted(endDate);
+
     return Container(
       padding: EdgeInsets.symmetric(
         vertical: size.height * 0.015,
@@ -601,21 +655,25 @@ class _todoState extends State<todo> {
 
                     /// CLICKABLE ICON
                     GestureDetector(
-                      onTap: () {
-                        detailsController.updateTodoStatus(
-                          task.id,
-                          !task.isCompleted, // 👈 toggle
-                        );
-                      },
-
-                      child: Icon(
-                        isCompleted
-                            ? FontAwesomeIcons.solidCircleCheck
-                            : FontAwesomeIcons.circle,
-                        color: isCompleted
-                            ? AppColors.success
-                            : AppColors.textSecondary.withOpacity(0.5),
-                        size: 20,
+                      onTap: disableActions
+                          ? null
+                          : () {
+                              detailsController.updateTodoStatus(
+                                task.id,
+                                !task.isCompleted,
+                              );
+                            },
+                      child: Opacity(
+                        opacity: disableActions ? 0.4 : 1.0,
+                        child: Icon(
+                          isCompleted
+                              ? FontAwesomeIcons.solidCircleCheck
+                              : FontAwesomeIcons.circle,
+                          color: isCompleted
+                              ? AppColors.success
+                              : AppColors.textSecondary.withOpacity(0.5),
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],

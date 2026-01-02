@@ -60,7 +60,7 @@ class AppDrawer extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Hii..,",
+                            "Welcome,",
                             style: AppTextStyles.subtitle.copyWith(
                               color: Colors.white.withOpacity(0.8),
                             ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:qlickcare/Services/locationservice.dart';
-import 'package:qlickcare/Services/profileservice.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'dart:math' show cos, sqrt, asin;
 

@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:qlickcare/Controllers/logoutcontroller.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
-import 'package:qlickcare/Utils/loading.dart';
+
 
 void confirmLogout(BuildContext context) {
   final logoutController = Get.put(LogoutController());
@@ -48,9 +48,7 @@ void confirmLogout(BuildContext context) {
           logoutController.isLoading.value
               ? Column(
                   children: [
-                    SizedBox(height: size.height * 0.01),
-                    const Loading(),
-                    SizedBox(height: size.height * 0.015),
+
                     Text(
                       "Please wait...",
                       textAlign: TextAlign.center,

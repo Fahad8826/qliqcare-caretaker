@@ -59,7 +59,7 @@ class PView extends StatelessWidget {
             ),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) =>  notification()),
+              MaterialPageRoute(builder: (_) => notification()),
             ),
           ),
         ],
@@ -368,6 +368,56 @@ class PView extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
+                    /// ================== DO'S & DON'TS ==================
+                    if (profile.dos != null && profile.dos!.isNotEmpty ||
+                        profile.donts != null && profile.donts!.isNotEmpty)
+                      _sectionCard(
+                        title: "Do's & Don'ts",
+                        isSmallScreen: isSmallScreen,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // DO'S Section
+                            if (profile.dos != null &&
+                                profile.dos!.isNotEmpty) ...[
+                              _dosDontsSubSection(
+                                title: "Do's",
+                                icon: Icons.check_circle,
+                                items: profile.dos!
+                                    .split('\n')
+                                    .where((item) => item.trim().isNotEmpty)
+                                    .toList(),
+                                color: AppColors.primary,
+                                isSmallScreen: isSmallScreen,
+                              ),
+                            ],
+
+                            // Spacing between sections
+                            if (profile.dos != null &&
+                                profile.dos!.isNotEmpty &&
+                                profile.donts != null &&
+                                profile.donts!.isNotEmpty)
+                              const SizedBox(height: 16),
+
+                            // DON'TS Section
+                            if (profile.donts != null &&
+                                profile.donts!.isNotEmpty) ...[
+                              _dosDontsSubSection(
+                                title: "Don'ts",
+                                icon: Icons.cancel,
+                                items: profile.donts!
+                                    .split('\n')
+                                    .where((item) => item.trim().isNotEmpty)
+                                    .toList(),
+                                color: Colors.red.shade400,
+                                isSmallScreen: isSmallScreen,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+
                     /// ================== BUTTONS ==================
                     Row(
                       children: [
@@ -451,11 +501,6 @@ class PView extends StatelessWidget {
   }
 
   // -------------------------------------------------------------------------------------
-  // LOGOUT DIALOG
-  // -------------------------------------------------------------------------------------
-  
-
-  // -------------------------------------------------------------------------------------
   // HELPER WIDGETS
   // -------------------------------------------------------------------------------------
 
@@ -514,6 +559,78 @@ class PView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _dosDontsSubSection({
+    required String title,
+    required IconData icon,
+    required List<String> items,
+    required Color color,
+    required bool isSmallScreen,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with icon
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 5 : 6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: isSmallScreen ? 16 : 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTextStyles.heading2.copyWith(
+                fontSize: isSmallScreen ? 14 : 16,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // List items
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Bullet point
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Text content
+                Expanded(
+                  child: Text(
+                    item.trim(),
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      height: 1.5,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/Model/attendance/attendencestatus_model.dart';
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 import '../Services/tokenservice.dart';
 
 class AttendanceStatsController extends GetxController {
@@ -18,11 +19,20 @@ class AttendanceStatsController extends GetxController {
     try {
       final token = await TokenService.getAccessToken();
 
-      final response = await http.get(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-        },
+      // final response = await http.get(
+      //   Uri.parse(baseUrl),
+      //   headers: {
+      //     "Authorization": "Bearer $token",
+      //   },
+      // );
+      final response = await ApiService.request(
+        (token) => http.get(
+          Uri.parse(baseUrl),
+          headers: {
+            "Content-Type": 'application/json',
+            "Authorization":"Bearer $token"
+          },
+        ),
       );
 
       if (response.statusCode == 200) {

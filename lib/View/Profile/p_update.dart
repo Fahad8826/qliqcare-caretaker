@@ -4,11 +4,13 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
+import 'package:qlickcare/View/Profile/do_and_dont.dart';
 import '../../Controllers/profilecontroller.dart';
 
 class EProfile extends StatelessWidget {
   final P_Controller controller = Get.find<P_Controller>();
   final ImagePicker picker = ImagePicker();
+
 
   EProfile({super.key});
 
@@ -42,6 +44,7 @@ class EProfile extends StatelessWidget {
         }
 
         final profile = controller.profile.value;
+
 
         return SingleChildScrollView(
           child: Column(
@@ -98,7 +101,9 @@ class EProfile extends StatelessWidget {
                                   );
                                 }
 
-                                if ((profile.profilePicture?.trim().isNotEmpty ??
+                                if ((profile.profilePicture
+                                        ?.trim()
+                                        .isNotEmpty ??
                                     false)) {
                                   return Container(
                                     decoration: BoxDecoration(
@@ -147,7 +152,10 @@ class EProfile extends StatelessWidget {
                                   child: const CircleAvatar(
                                     radius: 50,
                                     backgroundColor: Colors.grey,
-                                    child: Icon(Icons.error, color: Colors.white),
+                                    child: Icon(
+                                      Icons.error,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 );
                               }
@@ -277,6 +285,12 @@ class EProfile extends StatelessWidget {
                         );
                       },
                     ),
+
+                    const SizedBox(height: 20),
+
+                    
+                   
+                    const DosDontsListSection(),
 
                     const SizedBox(height: 20),
                     Text(
