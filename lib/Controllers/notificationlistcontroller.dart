@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/Model/notificationlist_model.dart';
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 import '../Services/tokenservice.dart';
 
 class NotificationController extends GetxController {
@@ -19,35 +20,64 @@ class NotificationController extends GetxController {
     super.onReady();
   }
 
+  // Future<void> fetchNotifications() async {
+  //   try {
+  //     isLoading.value = true;
+
+  //     final token = await TokenService.getAccessToken();
+
+  //     final response = await http.get(
+  //       Uri.parse(baseUrl),
+  //       headers: {
+  //         'Authorization': 'Bearer $token',
+  //         'Content-Type': 'application/json',
+  //       },
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+
+  //       count.value = data['count'] ?? 0;
+
+  //       notifications.value = (data['notifications'] as List)
+  //           .map((e) => AppNotification.fromJson(e))
+  //           .toList();
+  //     } else {
+  //       Get.snackbar("Error", "Failed to load notifications");
+  //     }
+  //   } catch (e) {
+  //     Get.snackbar("Error", "Something went wrong");
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
   Future<void> fetchNotifications() async {
-    try {
-      isLoading.value = true;
+  try {
+    isLoading.value = true;
 
-      final token = await TokenService.getAccessToken();
-
-      final response = await http.get(
+    final response = await ApiService.request(
+      (token) => http.get(
         Uri.parse(baseUrl),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-      );
+      ),
+    );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-        count.value = data['count'] ?? 0;
-
-        notifications.value = (data['notifications'] as List)
-            .map((e) => AppNotification.fromJson(e))
-            .toList();
-      } else {
-        Get.snackbar("Error", "Failed to load notifications");
-      }
-    } catch (e) {
-      Get.snackbar("Error", "Something went wrong");
-    } finally {
-      isLoading.value = false;
+      count.value = data['count'] ?? 0;
+      notifications.value = (data['notifications'] as List)
+          .map((e) => AppNotification.fromJson(e))
+          .toList();
     }
+  } catch (_) {
+    Get.snackbar("Error", "Session expired");
+  } finally {
+    isLoading.value = false;
   }
+}
+
 }

@@ -302,7 +302,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                 maxLines: 4,
                 style: AppTextStyles.body,
                 decoration: InputDecoration(
-                  hintText: "Describe your complaint in detail",
+                  hintText: "Describe your complaint in detail (min. 10 characters)",
                   hintStyle: AppTextStyles.body.copyWith(
                     color: AppColors.textSecondary.withOpacity(0.6),
                   ),
@@ -339,61 +339,64 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
               ),
               SizedBox(height: size.height * 0.008),
               Obx(
-                () => DropdownButtonFormField<String>(
-                  style: AppTextStyles.body,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.screenBackground,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: AppColors.primary,
-                        width: 2,
+                () => Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.screenBackground,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    style: AppTextStyles.body,
+                    icon: Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+                    decoration: InputDecoration(
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.04,
+                        vertical: size.height * 0.015,
                       ),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: size.width * 0.04,
-                      vertical: size.height * 0.015,
+                    hint: Text(
+                      "Select priority level",
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.textSecondary.withOpacity(0.6),
+                      ),
                     ),
-                  ),
-                  hint: Text(
-                    "Select priority level",
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary.withOpacity(0.6),
-                    ),
-                  ),
-                  value: selectedPriority.value == ""
-                      ? null
-                      : selectedPriority.value,
-                  items: priorities.map((p) {
-                    return DropdownMenuItem(
-                      value: p,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _getPriorityColor(p),
-                              shape: BoxShape.circle,
+                    value: selectedPriority.value == ""
+                        ? null
+                        : selectedPriority.value,
+                    items: priorities.map((p) {
+                      return DropdownMenuItem(
+                        value: p,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: _getPriorityColor(p),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: size.width * 0.02),
-                          Text(p.toUpperCase(), style: AppTextStyles.body),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) =>
-                      selectedPriority.value = value.toString(),
+                            SizedBox(width: size.width * 0.03),
+                            Text(
+                              p.toUpperCase(),
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: _getPriorityColor(p),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) =>
+                        selectedPriority.value = value.toString(),
+                    dropdownColor: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
 
@@ -419,24 +422,29 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                     onPressed: controller.isLoading.value
                         ? null
                         : () async {
-                            if (subjectCtrl.text.isEmpty) {
+                            if (subjectCtrl.text.trim().isEmpty) {
                               Get.snackbar(
                                 "Error",
                                 "Please enter a subject",
-                                backgroundColor: AppColors.error.withOpacity(
-                                  0.1,
-                                ),
+                                backgroundColor: AppColors.error.withOpacity(0.1),
                                 colorText: AppColors.error,
                               );
                               return;
                             }
-                            if (descriptionCtrl.text.isEmpty) {
+                            if (descriptionCtrl.text.trim().isEmpty) {
                               Get.snackbar(
                                 "Error",
                                 "Please enter a description",
-                                backgroundColor: AppColors.error.withOpacity(
-                                  0.1,
-                                ),
+                                backgroundColor: AppColors.error.withOpacity(0.1),
+                                colorText: AppColors.error,
+                              );
+                              return;
+                            }
+                            if (descriptionCtrl.text.trim().length < 10) {
+                              Get.snackbar(
+                                "Error",
+                                "Description must be at least 10 characters",
+                                backgroundColor: AppColors.error.withOpacity(0.1),
                                 colorText: AppColors.error,
                               );
                               return;
@@ -445,17 +453,15 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                               Get.snackbar(
                                 "Error",
                                 "Please select a priority",
-                                backgroundColor: AppColors.error.withOpacity(
-                                  0.1,
-                                ),
+                                backgroundColor: AppColors.error.withOpacity(0.1),
                                 colorText: AppColors.error,
                               );
                               return;
                             }
 
                             await controller.submitComplaint(
-                              subject: subjectCtrl.text,
-                              description: descriptionCtrl.text,
+                              subject: subjectCtrl.text.trim(),
+                              description: descriptionCtrl.text.trim(),
                               priority: selectedPriority.value,
                             );
 
@@ -465,7 +471,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                         ? SizedBox(
                             height: size.height * 0.025,
                             width: size.height * 0.025,
-                            child:Loading()
+                            child: Loading()
                           )
                         : Text("Submit Complaint", style: AppTextStyles.button),
                   ),

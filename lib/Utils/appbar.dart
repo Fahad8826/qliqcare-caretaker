@@ -18,17 +18,8 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final orientation = MediaQuery.of(context).orientation;
-    final isPortrait = orientation == Orientation.portrait;
-
-    final double iconSize = isPortrait ? size.width * 0.07 : size.height * 0.08;
-    final double titleSize = isPortrait
-        ? size.width * 0.055
-        : size.height * 0.065;
-
     return Container(
-      height: isPortrait ? size.height * 0.14 : 78,
+      height: preferredSize.height,
       decoration: const BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -39,40 +30,49 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            size.width * 0.04,
-            size.height * 0.01,
-            size.width * 0.04,
-            size.height * 0.02,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // LEFT ICON (default → menu)
+              // LEFT ICON (leading widget or default menu)
               leading ??
                   IconButton(
                     onPressed: onLeadingPressed ?? () {},
-                    icon: Icon(
+                    icon: const Icon(
                       FontAwesomeIcons.bars,
                       color: AppColors.buttonText,
-                      size: iconSize,
+                      size: 22,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
                     ),
                   ),
 
-              // TITLE
-              Text(
-                title,
-                style: TextStyle(
-                  color: AppColors.buttonText,
-                  fontSize: titleSize,
-                  fontWeight: FontWeight.w600,
+              // TITLE (centered and flexible)
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.buttonText,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.15,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
 
-              // RIGHT ACTIONS OR EMPTY SPACE
-              actions != null
-                  ? Row(mainAxisSize: MainAxisSize.min, children: actions!)
-                  : SizedBox(width: iconSize), // keeps alignment centered
+              // RIGHT ACTIONS OR EMPTY SPACE (for symmetry)
+              if (actions != null && actions!.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: actions!,
+                )
+              else
+                const SizedBox(width: 48), // Matches leading icon width
             ],
           ),
         ),
@@ -81,5 +81,5 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(95);
+  Size get preferredSize => const Size.fromHeight(88);
 }

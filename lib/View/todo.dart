@@ -52,7 +52,7 @@ class _todoState extends State<todo> {
   @override
   void initState() {
     super.initState();
-    bookingController.fetchBookings();
+    bookingController.fetchOngoingBookings();
 
     // Auto-select first booking when data loads
     ever(bookingController.bookings, (bookings) {

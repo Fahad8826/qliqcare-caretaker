@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:qlickcare/Controllers/leavecontroller.dart';
+import 'package:qlickcare/Controllers/leave/leavecontroller.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
 
 class LeaveStatsSection extends StatelessWidget {
   LeaveStatsSection({super.key});
 
-  final LeaveController controller = Get.put(LeaveController());
+  final LeaveController controller = Get.find<LeaveController>();
 
   @override
   Widget build(BuildContext context) {
@@ -53,15 +53,7 @@ class LeaveStatsSection extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Leave Summary",
-            style: AppTextStyles.heading2.copyWith(
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: size.height * 0.015),
-
-          // Leave Stats Card
+         
           Container(
             padding: EdgeInsets.all(size.width * 0.04),
             decoration: BoxDecoration(
@@ -111,6 +103,20 @@ class LeaveStatsSection extends StatelessWidget {
                   icon: Icons.list_alt,
                   label: "Total Leaves",
                   value: stats.totalLeaves.toString(),
+                ),
+                _statRow(
+                  context,
+                  icon: Icons.upcoming,
+                  label: "pending Leaves",
+                  value: stats.pendingleaves.toString(),
+                  
+                ),
+                _statRow(
+                  context,
+                  icon: Icons.approval,
+                  label: "Approved Leaves",
+                  value: stats.approvedleaves.toString(),
+                  
                 ),
                 _statRow(
                   context,

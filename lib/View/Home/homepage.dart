@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
 import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/bookingcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
@@ -22,40 +21,29 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String locationName = "Loading...";
-
-  // Track which patient cards are expanded
   Map<int, bool> expandedStates = {};
 
-  // GetX Controllers
   final P_Controller profileController = Get.put(P_Controller());
-
   final BookingController ongoingBookingController = Get.put(
-  BookingController(),
-  tag: 'homepage', // ✅ Add this tag
-);
+    BookingController(),
+    tag: 'homepage',
+  );
 
   @override
   void initState() {
     super.initState();
     _fetchLocationName();
-    
     ongoingBookingController.fetchOngoingBookings();
   }
 
-  
-
-Future<void> _fetchLocationName() async {
+  Future<void> _fetchLocationName() async {
     try {
-      // Get current coordinates (service should already be running from main.dart or login)
       final coords = await LocationService.getCurrentCoordinates();
-
       if (coords != null) {
-        // Get location name from coordinates
         final name = await LocationService.getLocationName(
           coords['lat']!,
           coords['lng']!,
         );
-
         setState(() {
           locationName = name;
         });
@@ -78,12 +66,10 @@ Future<void> _fetchLocationName() async {
     });
   }
 
-  // Helper function to format work type
   String _formatWorkType(String workType) {
     return workType.replaceAll('_', ' ').capitalize ?? workType;
   }
 
-  // Helper function to format date
   String _formatDate(String date) {
     try {
       final DateTime parsedDate = DateTime.parse(date);
@@ -94,29 +80,12 @@ Future<void> _fetchLocationName() async {
   }
 
   String _getMonthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[month - 1];
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final orientation = MediaQuery.of(context).orientation;
-    final isPortrait = orientation == Orientation.portrait;
-
     return Scaffold(
       backgroundColor: AppColors.screenBackground,
       drawer: const AppDrawer(),
@@ -124,25 +93,25 @@ Future<void> _fetchLocationName() async {
         title: "Home",
         actions: [
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               FontAwesomeIcons.bell,
               color: AppColors.background,
-              size: isPortrait ? size.width * 0.055 : size.height * 0.065,
+              size: 20,
             ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) =>  notification()),
+                MaterialPageRoute(builder: (context) => notification()),
               );
             },
           ),
         ],
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.menu,
               color: AppColors.background,
-              size: isPortrait ? size.width * 0.07 : size.height * 0.08,
+              size: 28,
             ),
             onPressed: () {
               Scaffold.of(context).openDrawer();
@@ -161,15 +130,15 @@ Future<void> _fetchLocationName() async {
               final profilePicture = profile?.profilePicture;
 
               return Container(
-                margin: EdgeInsets.all(size.width * 0.04),
-                padding: EdgeInsets.all(size.width * 0.04),
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.background,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -183,41 +152,31 @@ Future<void> _fetchLocationName() async {
                           Text(
                             "Good Morning,",
                             style: AppTextStyles.body.copyWith(
-                              fontSize: isPortrait
-                                  ? size.width * 0.038
-                                  : size.height * 0.045,
                               color: AppColors.textSecondary,
+                              fontSize: 13,
                             ),
                           ),
-                          SizedBox(height: size.height * 0.005),
+                          const SizedBox(height: 4),
                           Text(
                             fullName,
                             style: AppTextStyles.heading2.copyWith(
-                              fontSize: isPortrait
-                                  ? size.width * 0.055
-                                  : size.height * 0.065,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
                             ),
                           ),
-                          SizedBox(height: size.height * 0.01),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.location_on,
                                 color: AppColors.secondary,
-                                size: isPortrait
-                                    ? size.width * 0.045
-                                    : size.height * 0.055,
+                                size: 16,
                               ),
-                              SizedBox(width: size.width * 0.01),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   locationName,
-                                  style: AppTextStyles.body.copyWith(
-                                    fontSize: isPortrait
-                                        ? size.width * 0.035
-                                        : size.height * 0.042,
+                                  style: AppTextStyles.small.copyWith(
                                     color: AppColors.secondary,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -230,12 +189,8 @@ Future<void> _fetchLocationName() async {
                       ),
                     ),
                     Container(
-                      width: isPortrait
-                          ? size.width * 0.16
-                          : size.height * 0.18,
-                      height: isPortrait
-                          ? size.width * 0.16
-                          : size.height * 0.18,
+                      width: 56,
+                      height: 56,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -244,27 +199,21 @@ Future<void> _fetchLocationName() async {
                         ),
                       ),
                       child: ClipOval(
-                        child:
-                            (profilePicture != null &&
-                                profilePicture.trim().isNotEmpty)
+                        child: (profilePicture != null && profilePicture.trim().isNotEmpty)
                             ? Image.network(
                                 profilePicture.trim(),
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
+                                  return const Icon(
                                     Icons.person,
-                                    size: isPortrait
-                                        ? size.width * 0.08
-                                        : size.height * 0.09,
+                                    size: 32,
                                     color: AppColors.textSecondary,
                                   );
                                 },
                               )
-                            : Icon(
+                            : const Icon(
                                 Icons.person,
-                                size: isPortrait
-                                    ? size.width * 0.08
-                                    : size.height * 0.09,
+                                size: 32,
                                 color: AppColors.textSecondary,
                               ),
                       ),
@@ -276,25 +225,24 @@ Future<void> _fetchLocationName() async {
 
             // My Patients Section
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Text(
                 "My Patients",
                 style: AppTextStyles.heading2.copyWith(
-                  fontSize: isPortrait ? size.width * 0.05 : size.height * 0.06,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
                 ),
               ),
             ),
 
-            SizedBox(height: size.height * 0.015),
+            const SizedBox(height: 12),
 
-            // Patient Cards from Real Data
+            // Patient Cards
             Obx(() {
               if (ongoingBookingController.isLoading.value) {
-                return Center(
+                return const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(size.width * 0.1),
+                    padding: EdgeInsets.all(40),
                     child: Loading(),
                   ),
                 );
@@ -303,18 +251,18 @@ Future<void> _fetchLocationName() async {
               if (ongoingBookingController.bookings.isEmpty) {
                 return Center(
                   child: Padding(
-                    padding: EdgeInsets.all(size.width * 0.1),
+                    padding: const EdgeInsets.all(40),
                     child: Column(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.inbox_outlined,
-                          size: size.width * 0.15,
+                          size: 48,
                           color: AppColors.textSecondary,
                         ),
-                        SizedBox(height: size.height * 0.02),
+                        const SizedBox(height: 12),
                         Text(
                           "No Patients Found",
-                          style: AppTextStyles.heading2.copyWith(
+                          style: AppTextStyles.subtitle.copyWith(
                             color: AppColors.textSecondary,
                           ),
                         ),
@@ -328,15 +276,13 @@ Future<void> _fetchLocationName() async {
                 children: List.generate(
                   ongoingBookingController.bookings.length,
                   (index) {
-                    final booking = ongoingBookingController.bookings.elementAt(
-                      index,
-                    );
+                    final booking = ongoingBookingController.bookings.elementAt(index);
 
                     return _buildPatientCard(
                       context,
                       index: index,
                       name: "${booking.patientName}, ${booking.age}",
-                      condition: booking.booking_status, // ✅ FIXED
+                      condition: booking.booking_status,
                       gender: booking.gender,
                       shift: _formatWorkType(booking.workType),
                       location: "${booking.address}, ${booking.pincode}",
@@ -346,7 +292,7 @@ Future<void> _fetchLocationName() async {
                         "ID": booking.id.toString(),
                         "Gender": booking.gender,
                         "Age": booking.age.toString(),
-                        "Status": booking.booking_status, // ✅ FIXED
+                        "Status": booking.booking_status,
                         "Customer": booking.customerName,
                       },
                       serviceDetails: {
@@ -363,7 +309,7 @@ Future<void> _fetchLocationName() async {
               );
             }),
 
-            SizedBox(height: size.height * 0.02),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -385,25 +331,18 @@ Future<void> _fetchLocationName() async {
     required String totalAmount,
     required String advanceAmount,
   }) {
-    final size = MediaQuery.of(context).size;
-    final orientation = MediaQuery.of(context).orientation;
-    final isPortrait = orientation == Orientation.portrait;
-
     final isExpanded = expandedStates[index] ?? false;
 
     return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: size.width * 0.04,
-        vertical: size.height * 0.008,
-      ),
-      padding: EdgeInsets.all(size.width * 0.04),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -422,20 +361,14 @@ Future<void> _fetchLocationName() async {
                     Text(
                       name,
                       style: AppTextStyles.subtitle.copyWith(
-                        fontSize: isPortrait
-                            ? size.width * 0.045
-                            : size.height * 0.055,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: size.height * 0.005),
+                    const SizedBox(height: 4),
                     Text(
                       condition,
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: isPortrait
-                            ? size.width * 0.037
-                            : size.height * 0.044,
+                      style: AppTextStyles.small.copyWith(
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -445,17 +378,17 @@ Future<void> _fetchLocationName() async {
               IconButton(
                 onPressed: () => _toggleExpansion(index),
                 icon: Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
+                  isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   color: AppColors.textPrimary,
-                  size: isPortrait ? size.width * 0.07 : size.height * 0.08,
+                  size: 24,
                 ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
 
-          SizedBox(height: size.height * 0.012),
+          const SizedBox(height: 12),
 
           // Basic Info
           Row(
@@ -463,59 +396,44 @@ Future<void> _fetchLocationName() async {
               Icon(
                 gender.toLowerCase() == "male" ? Icons.male : Icons.female,
                 color: AppColors.secondary,
-                size: isPortrait ? size.width * 0.04 : size.height * 0.048,
+                size: 16,
               ),
-              SizedBox(width: size.width * 0.015),
+              const SizedBox(width: 6),
               Text(
                 gender,
-                style: AppTextStyles.small.copyWith(
-                  fontSize: isPortrait
-                      ? size.width * 0.033
-                      : size.height * 0.04,
-                  color: AppColors.textSecondary,
-                ),
+                style: AppTextStyles.small,
               ),
-              SizedBox(width: size.width * 0.04),
-              Icon(
+              const SizedBox(width: 16),
+              const Icon(
                 Icons.access_time,
                 color: AppColors.secondary,
-                size: isPortrait ? size.width * 0.04 : size.height * 0.048,
+                size: 16,
               ),
-              SizedBox(width: size.width * 0.015),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   shift,
-                  style: AppTextStyles.small.copyWith(
-                    fontSize: isPortrait
-                        ? size.width * 0.033
-                        : size.height * 0.04,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.small,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
 
-          SizedBox(height: size.height * 0.008),
+          const SizedBox(height: 8),
 
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.location_on,
                 color: AppColors.secondary,
-                size: isPortrait ? size.width * 0.04 : size.height * 0.048,
+                size: 16,
               ),
-              SizedBox(width: size.width * 0.015),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   location,
-                  style: AppTextStyles.small.copyWith(
-                    fontSize: isPortrait
-                        ? size.width * 0.033
-                        : size.height * 0.04,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.small,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -523,55 +441,44 @@ Future<void> _fetchLocationName() async {
             ],
           ),
 
-          // Expanded Content with Animation
+          // Expanded Content
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 300),
-            crossFadeState: isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
             firstChild: const SizedBox.shrink(),
             secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: size.height * 0.02),
-                Divider(color: AppColors.border),
-                SizedBox(height: size.height * 0.015),
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.border, height: 1),
+                const SizedBox(height: 16),
 
                 // Patient Details
                 Text(
                   "Patient Details",
                   style: AppTextStyles.subtitle.copyWith(
-                    fontSize: isPortrait
-                        ? size.width * 0.04
-                        : size.height * 0.048,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: size.height * 0.012),
+                const SizedBox(height: 12),
 
                 ...patientDetails.entries.map((entry) {
                   return Padding(
-                    padding: EdgeInsets.only(bottom: size.height * 0.01),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "${entry.key} :",
-                          style: AppTextStyles.body.copyWith(
-                            fontSize: isPortrait
-                                ? size.width * 0.035
-                                : size.height * 0.042,
+                          "${entry.key}:",
+                          style: AppTextStyles.small.copyWith(
                             color: AppColors.textSecondary,
                           ),
                         ),
                         Flexible(
                           child: Text(
                             entry.value,
-                            style: AppTextStyles.body.copyWith(
-                              fontSize: isPortrait
-                                  ? size.width * 0.035
-                                  : size.height * 0.042,
+                            style: AppTextStyles.small.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
@@ -584,45 +491,36 @@ Future<void> _fetchLocationName() async {
                   );
                 }).toList(),
 
-                SizedBox(height: size.height * 0.02),
+                const SizedBox(height: 16),
 
                 // Service Details
                 Text(
                   "Service Details",
                   style: AppTextStyles.subtitle.copyWith(
-                    fontSize: isPortrait
-                        ? size.width * 0.04
-                        : size.height * 0.048,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: size.height * 0.012),
+                const SizedBox(height: 12),
 
                 ...serviceDetails.entries.map((entry) {
                   return Padding(
-                    padding: EdgeInsets.only(bottom: size.height * 0.01),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${entry.key} :",
-                          style: AppTextStyles.body.copyWith(
-                            fontSize: isPortrait
-                                ? size.width * 0.035
-                                : size.height * 0.042,
+                          "${entry.key}:",
+                          style: AppTextStyles.small.copyWith(
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        SizedBox(width: size.width * 0.02),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             entry.value,
-                            style: AppTextStyles.body.copyWith(
-                              fontSize: isPortrait
-                                  ? size.width * 0.035
-                                  : size.height * 0.042,
+                            style: AppTextStyles.small.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
@@ -634,18 +532,17 @@ Future<void> _fetchLocationName() async {
                   );
                 }).toList(),
 
-                SizedBox(height: size.height * 0.02),
+                const SizedBox(height: 16),
 
                 // Action Buttons
                 SizedBox(
                   width: double.infinity,
-                  height: size.height * 0.055,
+                  height: 44,
                   child: ElevatedButton(
                     onPressed: () {
                       Get.to(
                         () => BookingDetailsPage(
-                          bookingId:
-                              ongoingBookingController.bookings[index].id,
+                          bookingId: ongoingBookingController.bookings[index].id,
                         ),
                       );
                     },
@@ -654,25 +551,23 @@ Future<void> _fetchLocationName() async {
                       foregroundColor: AppColors.buttonText,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
                       "Attendance & Tasks",
                       style: AppTextStyles.button.copyWith(
-                        fontSize: isPortrait
-                            ? size.width * 0.038
-                            : size.height * 0.045,
+                        fontSize: 14,
                       ),
                     ),
                   ),
                 ),
 
-                SizedBox(height: size.height * 0.01),
+                const SizedBox(height: 10),
 
                 SizedBox(
                   width: double.infinity,
-                  height: size.height * 0.055,
+                  height: 44,
                   child: OutlinedButton(
                     onPressed: () {
                       Navigator.push(
@@ -687,17 +582,15 @@ Future<void> _fetchLocationName() async {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary, width: 1.5),
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: Text(
                       "Chat with Patient",
                       style: AppTextStyles.button.copyWith(
-                        fontSize: isPortrait
-                            ? size.width * 0.038
-                            : size.height * 0.045,
+                        fontSize: 14,
                         color: AppColors.primary,
                       ),
                     ),

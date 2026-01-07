@@ -6,8 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/Model/attendance/attendance_model.dart';
 import 'package:qlickcare/Services/locationservice.dart';
-import 'package:qlickcare/Services/tokenservice.dart';
-
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 class AttendanceController extends GetxController {
   // -------------------- STATE --------------------
   final RxBool isLoading = false.obs;
@@ -17,17 +16,19 @@ class AttendanceController extends GetxController {
   String get baseUrl =>
       "${dotenv.env['BASE_URL']}/api/caretaker/bookings";
 
+
+// old method for headers
   // -------------------- HEADERS --------------------
-  Future<Map<String, String>> _headers() async {
-    final token = await TokenService.getAccessToken();
+  // Future<Map<String, String>> _headers() async {
+  //   // final token = await TokenService.getAccessToken();
 
-    debugPrint("🔐 Using access token: ${token?.substring(0, 10)}...");
+  //   debugPrint("🔐 Using access token: ${token?.substring(0, 10)}...");
 
-    return {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer $token",
-    };
-  }
+  //   return {
+  //     "Content-Type": "application/json",
+  //     "Authorization": "Bearer $token",
+  //   };
+  // }
 
   // -------------------- MESSAGE HANDLER --------------------
   String _extractMessage(Map<String, dynamic> data) {
@@ -54,14 +55,28 @@ class AttendanceController extends GetxController {
     debugPrint("🚀 CHECK-IN started | Booking ID: $bookingId");
 
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/$bookingId/attendance/check-in/"),
-        headers: await _headers(),
-        body: jsonEncode({
-          "latitude": latitude,
-          "longitude": longitude,
-        }),
+      // final response = await http.post(
+      //   Uri.parse("$baseUrl/$bookingId/attendance/check-in/"),
+      //   headers: await _headers(),
+      //   body: jsonEncode({
+      //     "latitude": latitude,
+      //     "longitude": longitude,
+      //   }),
+      // );
+      final response = await ApiService.request(
+        (token) => http.post(
+          Uri.parse("$baseUrl/$bookingId/attendance/check-in/"),
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization":"Bearer $token"
+          },
+          body: jsonEncode({
+            "latitude": latitude,
+            "longitude": longitude,
+          }),
+        ),
       );
+
 
       debugPrint("📡 CHECK-IN status: ${response.statusCode}");
       debugPrint("📦 CHECK-IN response: ${response.body}");
@@ -87,49 +102,44 @@ class AttendanceController extends GetxController {
     }
   }
 
-  // ================= CHECK OUT =================
+  
   Future<void> checkOut({
-    required int bookingId,
-    required double latitude,
-    required double longitude,
-  }) async {
-    isLoading.value = true;
+  required int bookingId,
+  required double latitude,
+  required double longitude,
+}) async {
+  isLoading.value = true;
 
-    debugPrint("🚀 CHECK-OUT started | Booking ID: $bookingId");
-
-    try {
-      final response = await http.post(
+  try {
+    final response = await ApiService.request((token) {
+      return http.post(
         Uri.parse("$baseUrl/$bookingId/attendance/check-out/"),
-        headers: await _headers(),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
         body: jsonEncode({
           "latitude": latitude,
           "longitude": longitude,
         }),
       );
+    });
 
-      debugPrint("📡 CHECK-OUT status: ${response.statusCode}");
-      debugPrint("📦 CHECK-OUT response: ${response.body}");
+    final data = jsonDecode(response.body);
 
-      final Map<String, dynamic> data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data["attendance"] != null) {
-        todayAttendance.value =
-            Attendance.fromJson(data["attendance"]);
-
-        debugPrint("✅ CHECK-OUT success");
-        Get.snackbar("Success", _extractMessage(data));
-      } else {
-        debugPrint("⚠️ CHECK-OUT validation failed");
-        Get.snackbar("Info", _extractMessage(data));
-      }
-    } catch (e, s) {
-      debugPrint("❌ CHECK-OUT error: $e");
-      debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Network or server error");
-    } finally {
-      isLoading.value = false;
+    if (response.statusCode == 200 && data["attendance"] != null) {
+      todayAttendance.value = Attendance.fromJson(data["attendance"]);
+      Get.snackbar("Success", _extractMessage(data));
+    } else {
+      Get.snackbar("Info", _extractMessage(data));
     }
+  } catch (e) {
+    Get.snackbar("Error", "Session expired. Please login again.");
+  } finally {
+    isLoading.value = false;
   }
+}
+
 
   // ================= LOCATION HANDLERS =================
 

@@ -234,7 +234,7 @@ class LocationService {
       return;
     }
 
-    final url = Uri.parse("$baseUrl/api/caretaker/profile/update/");
+    final url = Uri.parse("$baseUrl/api/caretaker/location-update/");
 
     try {
       final roundedLat = double.parse(lat.toStringAsFixed(6));

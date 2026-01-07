@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/Model/bookingdetails_model.dart';
-import 'package:qlickcare/Services/tokenservice.dart';
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 
 class BookingDetailsController extends GetxController {
@@ -14,118 +14,240 @@ class BookingDetailsController extends GetxController {
   String get baseUrl => "${dotenv.env['BASE_URL']}/api/caretaker/bookings";
 
   /// Fetch booking details by ID
+  // Future<void> fetchBookingDetails(int bookingId) async {
+  //   isLoading.value = true;
+
+  //   try {
+  //     final token = await TokenService.getAccessToken();
+
+  //     if (token == null || token.isEmpty) {
+  //       Get.snackbar(
+  //         "Error",
+  //         "Authentication token not found. Please login again.",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //       return;
+  //     }
+
+  //     final url = "$baseUrl/$bookingId/";
+  //     debugPrint("📡 Fetching booking details from: $url");
+
+  //     final response = await http.get(
+  //       Uri.parse(url),
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //         "Content-Type": "application/json",
+  //       },
+  //     );
+
+  //     debugPrint("📥 Response status: ${response.statusCode}");
+
+  //     if (response.statusCode == 200) {
+  //       try {
+  //         final data = jsonDecode(response.body);
+  //         debugPrint("✅ JSON decoded successfully");
+  //         debugPrint("📊 Booking ID: ${data['id']}");
+          
+  //         booking.value = BookingDetails.fromJson(data);
+  //         debugPrint("✅ Booking details loaded successfully");
+  //       } catch (parseError, stackTrace) {
+  //         debugPrint("❌ Parse Error: $parseError");
+  //         debugPrint("❌ Stack trace: $stackTrace");
+  //         debugPrint("📄 Response body: ${response.body}");
+          
+  //         Get.snackbar(
+  //           "Parse Error",
+  //           "Failed to parse booking data: $parseError",
+  //           snackPosition: SnackPosition.BOTTOM,
+  //           backgroundColor: AppColors.error,
+  //           colorText: AppColors.background,
+  //           duration: const Duration(seconds: 5),
+  //         );
+  //       }
+  //     } else if (response.statusCode == 404) {
+  //       Get.snackbar(
+  //         "Not Found",
+  //         "Booking not found",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //     } else if (response.statusCode == 401) {
+  //       Get.snackbar(
+  //         "Unauthorized",
+  //         "Session expired. Please login again.",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //     } else {
+  //       Get.snackbar(
+  //         "Error",
+  //         "Failed to load booking details (${response.statusCode})",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //     }
+  //   } catch (e, stackTrace) {
+  //     debugPrint("❌ Exception: $e");
+  //     debugPrint("❌ Stack trace: $stackTrace");
+      
+  //     Get.snackbar(
+  //       "Error",
+  //       "Network error: ${e.toString()}",
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: AppColors.error,
+  //       colorText: AppColors.background,
+  //       duration: const Duration(seconds: 5),
+  //     );
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
   Future<void> fetchBookingDetails(int bookingId) async {
-    isLoading.value = true;
+  isLoading.value = true;
 
-    try {
-      final token = await TokenService.getAccessToken();
+  try {
+    final url = "$baseUrl/$bookingId/";
+    debugPrint("📡 Fetching booking details from: $url");
 
-      if (token == null || token.isEmpty) {
-        Get.snackbar(
-          "Error",
-          "Authentication token not found. Please login again.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
-        );
-        return;
-      }
-
-      final url = "$baseUrl/$bookingId/";
-      debugPrint("📡 Fetching booking details from: $url");
-
-      final response = await http.get(
+    final response = await ApiService.request((token) {
+      return http.get(
         Uri.parse(url),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
         },
       );
+    });
 
-      debugPrint("📥 Response status: ${response.statusCode}");
+    debugPrint("📥 Response status: ${response.statusCode}");
 
-      if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body);
-          debugPrint("✅ JSON decoded successfully");
-          debugPrint("📊 Booking ID: ${data['id']}");
-          
-          booking.value = BookingDetails.fromJson(data);
-          debugPrint("✅ Booking details loaded successfully");
-        } catch (parseError, stackTrace) {
-          debugPrint("❌ Parse Error: $parseError");
-          debugPrint("❌ Stack trace: $stackTrace");
-          debugPrint("📄 Response body: ${response.body}");
-          
-          Get.snackbar(
-            "Parse Error",
-            "Failed to parse booking data: $parseError",
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.error,
-            colorText: AppColors.background,
-            duration: const Duration(seconds: 5),
-          );
-        }
-      } else if (response.statusCode == 404) {
+    if (response.statusCode == 200) {
+      try {
+        final data = jsonDecode(response.body);
+        booking.value = BookingDetails.fromJson(data);
+        debugPrint("✅ Booking details loaded successfully");
+      } catch (parseError, stackTrace) {
+        debugPrint("❌ Parse Error: $parseError");
+        debugPrint("❌ Stack trace: $stackTrace");
+
         Get.snackbar(
-          "Not Found",
-          "Booking not found",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
-        );
-      } else if (response.statusCode == 401) {
-        Get.snackbar(
-          "Unauthorized",
-          "Session expired. Please login again.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
-        );
-      } else {
-        Get.snackbar(
-          "Error",
-          "Failed to load booking details (${response.statusCode})",
+          "Parse Error",
+          "Failed to parse booking data",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.error,
           colorText: AppColors.background,
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint("❌ Exception: $e");
-      debugPrint("❌ Stack trace: $stackTrace");
-      
+    } else if (response.statusCode == 404) {
       Get.snackbar(
-        "Error",
-        "Network error: ${e.toString()}",
+        "Not Found",
+        "Booking not found",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.error,
         colorText: AppColors.background,
-        duration: const Duration(seconds: 5),
       );
-    } finally {
-      isLoading.value = false;
+    } else {
+      Get.snackbar(
+        "Error",
+        "Failed to load booking details (${response.statusCode})",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.error,
+        colorText: AppColors.background,
+      );
     }
+  } catch (e, stackTrace) {
+    debugPrint("❌ Exception: $e");
+    debugPrint("❌ Stack trace: $stackTrace");
+
+    Get.snackbar(
+      "Error",
+      "Network error: ${e.toString()}",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: AppColors.error,
+      colorText: AppColors.background,
+    );
+  } finally {
+    isLoading.value = false;
   }
+}
+
 
   /// Update todo item completion status
+  // Future<void> updateTodoStatus(int todoId, bool isCompleted) async {
+  //   try {
+  //     final token = await TokenService.getAccessToken();
+
+  //     if (token == null || token.isEmpty) {
+  //       Get.snackbar(
+  //         "Error",
+  //         "Authentication required",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //       return;
+  //     }
+
+  //     final response = await http.patch(
+  //       Uri.parse("${dotenv.env['BASE_URL']}/api/caretaker/todos/$todoId/"),
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: jsonEncode({
+  //         "is_completed": isCompleted,
+  //       }),
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       // Update local state
+  //       if (booking.value != null) {
+  //         final todoIndex = booking.value!.todos.indexWhere((t) => t.id == todoId);
+  //         if (todoIndex != -1) {
+  //           booking.value!.todos[todoIndex].isCompleted = isCompleted;
+  //           booking.refresh();
+  //         }
+  //       }
+
+  //       Get.snackbar(
+  //         "Success",
+  //         isCompleted ? "Task completed" : "Task marked incomplete",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.success,
+  //         colorText: AppColors.background,
+  //       );
+  //     } else {
+  //       Get.snackbar(
+  //         "Error",
+  //         "Failed to update task",
+  //         snackPosition: SnackPosition.BOTTOM,
+  //         backgroundColor: AppColors.error,
+  //         colorText: AppColors.background,
+  //       );
+  //     }
+  //   } catch (e) {
+  //     debugPrint("❌ Error updating todo: $e");
+  //     Get.snackbar(
+  //       "Error",
+  //       "Failed to update task: ${e.toString()}",
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: AppColors.error,
+  //       colorText: AppColors.background,
+  //     );
+  //   }
+  // }
   Future<void> updateTodoStatus(int todoId, bool isCompleted) async {
-    try {
-      final token = await TokenService.getAccessToken();
-
-      if (token == null || token.isEmpty) {
-        Get.snackbar(
-          "Error",
-          "Authentication required",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
-        );
-        return;
-      }
-
-      final response = await http.patch(
-        Uri.parse("${dotenv.env['BASE_URL']}/api/caretaker/todos/$todoId/"),
+  try {
+    final response = await ApiService.request((token) {
+      return http.patch(
+        Uri.parse(
+          "${dotenv.env['BASE_URL']}/api/caretaker/todos/$todoId/",
+        ),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
@@ -134,44 +256,46 @@ class BookingDetailsController extends GetxController {
           "is_completed": isCompleted,
         }),
       );
+    });
 
-      if (response.statusCode == 200) {
-        // Update local state
-        if (booking.value != null) {
-          final todoIndex = booking.value!.todos.indexWhere((t) => t.id == todoId);
-          if (todoIndex != -1) {
-            booking.value!.todos[todoIndex].isCompleted = isCompleted;
-            booking.refresh();
-          }
+    if (response.statusCode == 200) {
+      if (booking.value != null) {
+        final index =
+            booking.value!.todos.indexWhere((t) => t.id == todoId);
+        if (index != -1) {
+          booking.value!.todos[index].isCompleted = isCompleted;
+          booking.refresh();
         }
-
-        Get.snackbar(
-          "Success",
-          isCompleted ? "Task completed" : "Task marked incomplete",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.success,
-          colorText: AppColors.background,
-        );
-      } else {
-        Get.snackbar(
-          "Error",
-          "Failed to update task",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
-        );
       }
-    } catch (e) {
-      debugPrint("❌ Error updating todo: $e");
+
+      Get.snackbar(
+        "Success",
+        isCompleted ? "Task completed" : "Task marked incomplete",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.success,
+        colorText: AppColors.background,
+      );
+    } else {
       Get.snackbar(
         "Error",
-        "Failed to update task: ${e.toString()}",
+        "Failed to update task",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.error,
         colorText: AppColors.background,
       );
     }
+  } catch (e) {
+    debugPrint("❌ Error updating todo: $e");
+    Get.snackbar(
+      "Error",
+      "Failed to update task",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: AppColors.error,
+      colorText: AppColors.background,
+    );
   }
+}
+
 
   /// Getters for convenient access to booking data
   bool get isCheckedInToday {

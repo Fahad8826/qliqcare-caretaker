@@ -37,6 +37,22 @@ class _OtpPageState extends State<OtpPage> {
     super.dispose();
   }
 
+  /// Fill OTP boxes automatically
+  void _fillOtp(String otp) {
+    if (otp.length != 6) return;
+
+    for (int i = 0; i < 6; i++) {
+      otpControllers[i].text = otp[i];
+    }
+
+    FocusScope.of(context).unfocus();
+
+    controller.verifyOtp(
+      phoneNumber: widget.phoneNumber,
+      otp: otp,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -74,14 +90,32 @@ class _OtpPageState extends State<OtpPage> {
                   child: const Text(
                     "Change Number?",
                     style: TextStyle(
-                      color: Color.fromARGB(255, 6, 6, 6),
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
 
-                /// OTP Text Fields
+                /// 🔹 HIDDEN OTP AUTOFILL FIELD (VERY IMPORTANT)
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  onChanged: (value) {
+                    if (value.length == 6) {
+                      _fillOtp(value);
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                  style: const TextStyle(color: Colors.transparent),
+                  cursorColor: Colors.transparent,
+                ),
+
+                /// OTP BOXES
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(
@@ -96,18 +130,16 @@ class _OtpPageState extends State<OtpPage> {
                         keyboardType: TextInputType.number,
                         maxLength: 1,
                         decoration: InputDecoration(
+                          counterText: "",
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
-                            ),
+                            borderSide:
+                                const BorderSide(color: AppColors.primary),
                           ),
-                          counterText: "",
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
-                            ),
+                            borderSide:
+                                const BorderSide(color: AppColors.primary),
                           ),
                         ),
                         onChanged: (value) {
@@ -116,7 +148,6 @@ class _OtpPageState extends State<OtpPage> {
                           } else if (value.isEmpty && index > 0) {
                             focusNodes[index - 1].requestFocus();
                           } else if (index == 5 && value.isNotEmpty) {
-                            FocusScope.of(context).unfocus();
                             final otp = otpControllers
                                 .map((e) => e.text)
                                 .join();
@@ -130,14 +161,17 @@ class _OtpPageState extends State<OtpPage> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 35),
 
+                /// CONTINUE BUTTON
                 Obx(
                   () => CommonButton(
                     text: "Continue",
                     isLoading: controller.isLoading.value,
                     onPressed: () {
-                      final otp = otpControllers.map((e) => e.text).join();
+                      final otp =
+                          otpControllers.map((e) => e.text).join();
                       controller.verifyOtp(
                         phoneNumber: widget.phoneNumber,
                         otp: otp,
@@ -148,7 +182,7 @@ class _OtpPageState extends State<OtpPage> {
 
                 const SizedBox(height: 20),
 
-                /// Resend OTP Timer or Button
+                /// RESEND OTP
                 Obx(() {
                   return controller.secondsRemaining.value > 0
                       ? Text(
@@ -162,15 +196,14 @@ class _OtpPageState extends State<OtpPage> {
                           onPressed: controller.isResending.value
                               ? null
                               : () async {
-                                  await controller.resendOtp(
-                                    widget.phoneNumber,
-                                  );
+                                  await controller
+                                      .resendOtp(widget.phoneNumber);
                                 },
                           child: controller.isResending.value
                               ? const SizedBox(
                                   height: 18,
                                   width: 18,
-                                  child: Loading()
+                                  child: Loading(),
                                 )
                               : const Text(
                                   "Resend OTP",
@@ -193,7 +226,8 @@ class _OtpPageState extends State<OtpPage> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.black45, width: 1.5),
                     ),
-                    child: const Icon(Icons.arrow_back, color: Colors.black87),
+                    child:
+                        const Icon(Icons.arrow_back, color: Colors.black87),
                   ),
                 ),
               ],

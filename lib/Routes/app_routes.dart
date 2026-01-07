@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:qlickcare/View/Auth/login.dart';
+import 'package:qlickcare/View/Drawer/leave&attendance/myleave.dart';
 import 'package:qlickcare/View/Home/navbar.dart';
 
 import 'package:qlickcare/View/Splash/splashscreen.dart';
@@ -8,7 +9,7 @@ import 'package:qlickcare/View/Home/homepage.dart';
 import 'package:qlickcare/View/Drawer/Booking/bookingview.dart';
 import 'package:qlickcare/View/chat/chatscreen.dart';
 import 'package:qlickcare/View/Drawer/complaints/complaints.dart';
-import 'package:qlickcare/View/Drawer/leave&attendance/leaveandattendace.dart';
+import 'package:qlickcare/View/Drawer/leave&attendance/attendace.dart';
 import 'package:qlickcare/View/Drawer/payment/paysliplist.dart';
 
 class AppRoutes {
@@ -23,6 +24,7 @@ class AppRoutes {
   static const String bookingView = '/bookingView';
   static const String payslipList = '/payslipList';
   static const String leaveAttendance = '/leaveAttendance';
+  static const String settings = '/leave';
 
   static final pages = [
     GetPage(name: splash, page: () => SplashScreen()),
@@ -35,5 +37,6 @@ class AppRoutes {
     GetPage(name: bookingView, page: () => BookingView()),
     GetPage(name: payslipList, page: () => PayslipListView()),
     GetPage(name: leaveAttendance, page: () => Leaveandattendace()),
+    GetPage(name: settings, page: () => LeaveManagementScreen()), // Placeholder
   ];
 }

@@ -3,52 +3,96 @@ import 'package:get/get.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/Model/deleteaccount_model.dart';
-import 'package:qlickcare/Services/tokenservice.dart';
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 import 'package:qlickcare/View/Auth/login.dart';
 
 class AccountController extends GetxController {
   var isDeleting = false.obs;
 
+  // Future<void> deleteAccount() async {
+  //   final String baseUrl = dotenv.env['BASE_URL']!;
+  //   String? token = await TokenService.getAccessToken();
+
+  //   final url = Uri.parse('$baseUrl/api/caretaker/account/delete/');
+
+  //   final headers = {
+  //     'Content-Type': 'application/json',
+  //     'Authorization': 'Bearer $token',
+  //   };
+
+  //   final body = jsonEncode(
+  //     DeleteAccountRequest(confirmation: "DELETE").toJson(),
+  //   );
+
+  //   try {
+  //     isDeleting.value = true;
+
+  //     final response = await http.post(url, headers: headers, body: body);
+
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+
+  //       // 🔥 Show success
+  //       Get.snackbar("Success", data["message"] ?? "Account deleted");
+
+  //       // 🔥 CLEAR ALL TOKENS
+  //       await TokenService.clearTokens();
+
+  //       // 🔥 Now navigate to login screen
+  //       Future.delayed(Duration(milliseconds: 500), () {
+  //         Get.offAll(() => LoginView());
+  //       });
+  //     } else {
+  //       Get.snackbar("Error", response.body);
+  //     }
+  //   } catch (e) {
+  //     Get.snackbar("Exception", e.toString());
+  //   } finally {
+  //     isDeleting.value = false;
+  //   }
+  // }
   Future<void> deleteAccount() async {
-    final String baseUrl = dotenv.env['BASE_URL']!;
-    String? token = await TokenService.getAccessToken();
+  final String baseUrl = dotenv.env['BASE_URL']!;
+  final url = Uri.parse('$baseUrl/api/caretaker/account/delete/');
 
-    final url = Uri.parse('$baseUrl/api/caretaker/account/delete/');
+  final body = jsonEncode(
+    DeleteAccountRequest(confirmation: "DELETE").toJson(),
+  );
 
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
+  try {
+    isDeleting.value = true;
 
-    final body = jsonEncode(
-      DeleteAccountRequest(confirmation: "DELETE").toJson(),
-    );
+    final response = await ApiService.request((token) {
+      return http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: body,
+      );
+    });
 
-    try {
-      isDeleting.value = true;
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-      final response = await http.post(url, headers: headers, body: body);
+      Get.snackbar(
+        "Success",
+        data["message"] ?? "Account deleted",
+      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // 🔥 Show success
-        Get.snackbar("Success", data["message"] ?? "Account deleted");
-
-        // 🔥 CLEAR ALL TOKENS
-        await TokenService.clearTokens();
-
-        // 🔥 Now navigate to login screen
-        Future.delayed(Duration(milliseconds: 500), () {
-          Get.offAll(() => LoginView());
-        });
-      } else {
-        Get.snackbar("Error", response.body);
-      }
-    } catch (e) {
-      Get.snackbar("Exception", e.toString());
-    } finally {
-      isDeleting.value = false;
+      // 👉 Explicit logout after delete
+      Future.delayed(const Duration(milliseconds: 500), () {
+        Get.offAll(() => LoginView());
+      });
+    } else {
+      Get.snackbar("Error", response.body);
     }
+  } catch (e) {
+    Get.snackbar("Exception", e.toString());
+  } finally {
+    isDeleting.value = false;
   }
+}
+
 }

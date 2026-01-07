@@ -6,9 +6,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Services/tokenexpireservice.dart';
 
 import '../main.dart';
-import 'tokenservice.dart';
 
 class NotificationService {
   static final NotificationService _instance =
@@ -46,9 +46,6 @@ class NotificationService {
   /// TOKEN
   /// ----------------------------------------------------------
   Future<void> _getAndRegisterToken() async {
-    final authToken = await TokenService.getAccessToken();
-    if (authToken == null) return;
-
     final token = await _fcm.getToken();
     print("📱 FCM Token: $token");
 
@@ -67,21 +64,28 @@ class NotificationService {
   /// ----------------------------------------------------------
   /// REGISTER TO BACKEND
   /// ----------------------------------------------------------
-  Future<void> registerTokenToBackend(String token) async {
-    final authToken = await TokenService.getAccessToken();
-    if (authToken == null) return;
+  Future<void> registerTokenToBackend(String fcmToken) async {
+    try {
+      await ApiService.request((accessToken) async {
+        final url = Uri.parse('$baseUrl/api/caretaker/register-token/');
+        return http.post(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $accessToken",
+          },
+          body: jsonEncode({
+            "token": fcmToken,
+            "device_type": Platform.isAndroid ? "android" : "ios",
+          }),
+        );
+      });
 
-    await http.post(
-      Uri.parse('$baseUrl/api/caretaker/register-token/'),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $authToken",
-      },
-      body: jsonEncode({
-        "token": token,
-        "device_type": Platform.isAndroid ? "android" : "ios",
-      }),
-    );
+      print("✅ FCM Token registered to backend");
+    } catch (e) {
+      print("❌ Failed to register FCM token: $e");
+      // Do NOT block the app flow if registration fails
+    }
   }
 
   /// ----------------------------------------------------------
@@ -104,8 +108,7 @@ class NotificationService {
     const androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const initSettings =
-        InitializationSettings(android: androidInit);
+    const initSettings = InitializationSettings(android: androidInit);
 
     await flutterLocalNotificationsPlugin.initialize(initSettings);
 

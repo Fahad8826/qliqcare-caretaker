@@ -17,54 +17,36 @@ import 'package:qlickcare/View/listnotification.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class BookingDetailsPage extends StatefulWidget {
+class BookingDetailsPage extends StatelessWidget {
   final int bookingId;
-  BookingDetailsPage({required this.bookingId});
-
-  @override
-  State<BookingDetailsPage> createState() => _BookingDetailsPageState();
-}
-
-class _BookingDetailsPageState extends State<BookingDetailsPage> {
-  final BookingDetailsController controller = Get.put(
-    BookingDetailsController(),
-  );
-
-  final AttendanceController attendanceController = Get.put(
-    AttendanceController(),
-  );
-
-  // Store caretaker location
-  Map<String, double>? caretakerLocation;
-  bool isLoadingLocation = false;
-
-  @override
-  void initState() {
-    super.initState();
+  
+  BookingDetailsPage({required this.bookingId}) {
+    // Initialize controllers
+    final controller = Get.put(BookingDetailsController());
+    final attendanceController = Get.put(AttendanceController());
+    
+    // Fetch data when page is created
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await controller.fetchBookingDetails(widget.bookingId);
-      // Fetch caretaker's current location from profile
+      await controller.fetchBookingDetails(bookingId);
       await _fetchCaretakerLocation();
     });
   }
 
+  // Store caretaker location as observable
+  final caretakerLocation = Rxn<Map<String, double>>();
+  final isLoadingLocation = false.obs;
+
   // Fetch caretaker location from profile
   Future<void> _fetchCaretakerLocation() async {
-    setState(() {
-      isLoadingLocation = true;
-    });
+    isLoadingLocation.value = true;
 
     try {
-      caretakerLocation = await LocationService.getCurrentCoordinates();
-      debugPrint("📍 Caretaker location loaded: $caretakerLocation");
+      caretakerLocation.value = await LocationService.getCurrentCoordinates();
+      debugPrint("📍 Caretaker location loaded: ${caretakerLocation.value}");
     } catch (e) {
       debugPrint("❌ Error loading caretaker location: $e");
     } finally {
-      if (mounted) {
-        setState(() {
-          isLoadingLocation = false;
-        });
-      }
+      isLoadingLocation.value = false;
     }
   }
 
@@ -114,6 +96,8 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<BookingDetailsController>();
+    final attendanceController = Get.find<AttendanceController>();
     final size = MediaQuery.of(context).size;
     final orientation = MediaQuery.of(context).orientation;
     final isPortrait = orientation == Orientation.portrait;
@@ -197,7 +181,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               SizedBox(height: size.height * 0.02),
 
               // Patient Information Card
-              _buildPatientInfoCard(size, b),
+              _buildPatientInfoCard(size, b, context),
 
               SizedBox(height: size.height * 0.02),
 
@@ -213,12 +197,10 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
 
               // Attendance Summary Card
               if (b.attendanceSummary != null)
-                // In your BookingDetailsPage
                 EnhancedAttendanceSummary(booking: b),
               SizedBox(height: size.height * 0.03),
 
               // Today's Tasks
-              
               Text(
                 "Today's Tasks",
                 style: AppTextStyles.subtitle.copyWith(
@@ -230,7 +212,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
 
               SizedBox(height: size.height * 0.015),
               buildCaretakerStatusMessage(b),
-              _buildTaskList(size, b.todos, detailsController.isOnLeaveToday, b.endDate),
+              _buildTaskList(size, b.todos, controller.isOnLeaveToday, b.endDate, controller),
 
               SizedBox(height: size.height * 0.03),
 
@@ -255,7 +237,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
               SizedBox(height: size.height * 0.03),
 
               // Check-in/Check-out Slider with Location Check
-              _buildAttendanceSlider(size, b),
+              _buildAttendanceSlider(size, b, controller, attendanceController),
 
               SizedBox(height: size.height * 0.02),
             ],
@@ -265,7 +247,12 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
     );
   }
 
-  Widget _buildAttendanceSlider(Size size, BookingDetails b) {
+  Widget _buildAttendanceSlider(
+    Size size,
+    BookingDetails b,
+    BookingDetailsController controller,
+    AttendanceController attendanceController,
+  ) {
     return Obx(() {
       final bool isCheckedOut = controller.isCheckedOutToday;
       final bool isleaveToday = controller.isOnLeaveToday;
@@ -359,12 +346,12 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
         child: AttendanceSlideButton(
           isCheckedIn: controller.isCheckedInToday,
           onCheckIn: () async {
-            await attendanceController.handleCheckIn(widget.bookingId);
-            await controller.fetchBookingDetails(widget.bookingId);
+            await attendanceController.handleCheckIn(bookingId);
+            await controller.fetchBookingDetails(bookingId);
           },
           onCheckOut: () async {
-            await attendanceController.handleCheckOut(widget.bookingId);
-            await controller.fetchBookingDetails(widget.bookingId);
+            await attendanceController.handleCheckOut(bookingId);
+            await controller.fetchBookingDetails(bookingId);
           },
         ),
       );
@@ -372,7 +359,7 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
   }
 
   // Patient Information Card
-  Widget _buildPatientInfoCard(Size size, BookingDetails b) {
+  Widget _buildPatientInfoCard(Size size, BookingDetails b, BuildContext context) {
     return Container(
       padding: EdgeInsets.all(size.width * 0.04),
       decoration: BoxDecoration(
@@ -863,11 +850,14 @@ class _BookingDetailsPageState extends State<BookingDetailsPage> {
       ),
     );
   }
+
+  
 Widget _buildTaskList(
     Size size,
     List<TodoItem> todos,
     bool isOnLeaveToday,
     String endDate,
+    BookingDetailsController controller,
   ) {
     // Disable actions if on leave or booking is completed
     final bool disableActions = isOnLeaveToday || isBookingCompleted(endDate);
@@ -933,7 +923,7 @@ Widget _buildTaskList(
                       onTap: disableActions
                           ? null
                           : () {
-                              detailsController.updateTodoStatus(
+                              controller.updateTodoStatus(
                                 task.id,
                                 !task.isCompleted,
                               );
@@ -960,103 +950,5 @@ Widget _buildTaskList(
       ),
     );
   }
-  // Widget _buildTaskList(Size size, List<TodoItem> todos) {
-  //   if (todos.isEmpty) {
-  //     return Container(
-  //       padding: EdgeInsets.all(size.width * 0.04),
-  //       decoration: BoxDecoration(
-  //         color: AppColors.background,
-  //         borderRadius: BorderRadius.circular(16),
-  //         boxShadow: [
-  //           BoxShadow(
-  //             color: Colors.black.withOpacity(0.05),
-  //             blurRadius: 10,
-  //             offset: const Offset(0, 2),
-  //           ),
-  //         ],
-  //       ),
-  //       child: Center(
-  //         child: Text(
-  //           "No tasks for today",
-  //           style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-  //         ),
-  //       ),
-  //     );
-  //   }
 
-  //   return Container(
-  //     padding: EdgeInsets.symmetric(
-  //       vertical: size.height * 0.015,
-  //       horizontal: size.width * 0.02,
-  //     ),
-  //     decoration: BoxDecoration(
-  //       color: AppColors.background,
-  //       borderRadius: BorderRadius.circular(16),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: Colors.black.withOpacity(0.05),
-  //           blurRadius: 10,
-  //           offset: const Offset(0, 2),
-  //         ),
-  //       ],
-  //     ),
-  //     child: ListView.separated(
-  //       shrinkWrap: true,
-  //       physics: const NeverScrollableScrollPhysics(),
-  //       itemCount: todos.length,
-  //       separatorBuilder: (context, index) =>
-  //           const Divider(height: 1, color: Color(0xFFEAEAEA)),
-  //       itemBuilder: (context, index) {
-  //         final task = todos[index];
-  //         final bool isCompleted = task.isCompleted;
-
-  //         return Padding(
-  //           padding: const EdgeInsets.symmetric(vertical: 8.0),
-  //           child: Row(
-  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //             children: [
-  //               Expanded(
-  //                 child: Text(
-  //                   task.text ?? "No Task",
-  //                   style: AppTextStyles.body.copyWith(
-  //                     color: AppColors.textPrimary,
-  //                     decoration: isCompleted
-  //                         ? TextDecoration.lineThrough
-  //                         : TextDecoration.none,
-  //                   ),
-  //                 ),
-  //               ),
-  //               Row(
-  //                 children: [
-  //                   Text(
-  //                     task.time ?? "N/A",
-  //                     style: AppTextStyles.small.copyWith(
-  //                       color: AppColors.textSecondary,
-  //                       fontWeight: FontWeight.w500,
-  //                     ),
-  //                   ),
-  //                   SizedBox(width: size.width * 0.02),
-  //                   GestureDetector(
-  //                     onTap: () {
-  //                       controller.updateTodoStatus(task.id, !task.isCompleted);
-  //                     },
-  //                     child: Icon(
-  //                       isCompleted
-  //                           ? FontAwesomeIcons.solidCircleCheck
-  //                           : FontAwesomeIcons.circle,
-  //                       color: isCompleted
-  //                           ? AppColors.success
-  //                           : AppColors.textSecondary.withOpacity(0.5),
-  //                       size: 20,
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ],
-  //           ),
-  //         );
-  //       },
-  //     ),
-  //   );
-  // }
 }
