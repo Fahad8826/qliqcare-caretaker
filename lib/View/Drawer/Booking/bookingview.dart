@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:qlickcare/Controllers/bookingcontroller.dart';
+import 'package:qlickcare/Controllers/bookings/bookingcontroller.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
-import 'package:qlickcare/View/Drawer/Booking/bookingdetailedview.dart';
+import 'package:qlickcare/View/Drawer/Booking/Details/bookingdetailedview.dart';
 
 class BookingView extends StatelessWidget {
   BookingView({Key? key}) : super(key: key);

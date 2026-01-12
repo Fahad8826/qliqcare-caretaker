@@ -3,10 +3,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:qlickcare/Model/bookingdetails_model.dart';
+import 'package:qlickcare/Model/bookings/Details/bookingdetails_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
-import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
+import 'package:qlickcare/Controllers/bookings/bookingdetailscontroller.dart';
 
 /// Reusable Card Container
 class BookingCard extends StatelessWidget {
@@ -462,106 +462,7 @@ class CustomerContactCard extends StatelessWidget {
   }
 }
 
-/// Booking Period Card
-class BookingPeriodCard extends StatelessWidget {
-  final BookingDetails booking;
 
-  const BookingPeriodCard({Key? key, required this.booking}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    if (booking.startDate.isEmpty || booking.endDate.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    try {
-      final startDate = DateTime.parse(booking.startDate);
-      final endDate = DateTime.parse(booking.endDate);
-      final duration = endDate.difference(startDate).inDays + 1;
-
-      return BookingCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const CardTitle(title: "Booking Period"),
-            const SizedBox(height: 12),
-            
-            Row(
-              children: [
-                Expanded(
-                  child: _DateColumn(
-                    label: "Start Date",
-                    date: DateFormat('dd MMM yyyy').format(startDate),
-                  ),
-                ),
-                Container(
-                  height: 40,
-                  width: 1,
-                  color: AppColors.textSecondary.withOpacity(0.2),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _DateColumn(
-                    label: "End Date",
-                    date: DateFormat('dd MMM yyyy').format(endDate),
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-            
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                "Duration: $duration days",
-                style: AppTextStyles.body.copyWith(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint("Error parsing dates: $e");
-      return const SizedBox.shrink();
-    }
-  }
-}
-
-class _DateColumn extends StatelessWidget {
-  final String label;
-  final String date;
-
-  const _DateColumn({required this.label, required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.small.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          date,
-          style: AppTextStyles.body.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 /// Task List Widget
 class TaskList extends StatelessWidget {

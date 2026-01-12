@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:qlickcare/Controllers/bookingcontroller.dart';
+import 'package:qlickcare/Controllers/bookings/bookingcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
 import 'package:qlickcare/Services/locationservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/View/Drawer/drawer.dart';
-import 'package:qlickcare/View/Drawer/Booking/bookingdetailedview.dart';
+import 'package:qlickcare/View/Drawer/Booking/Details/bookingdetailedview.dart';
 import 'package:qlickcare/View/chat/chatdetailscreen.dart';
 import 'package:qlickcare/View/listnotification.dart';
 
@@ -80,7 +80,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[month - 1];
   }
 
@@ -108,11 +121,7 @@ class _HomePageState extends State<HomePage> {
         ],
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(
-              Icons.menu,
-              color: AppColors.background,
-              size: 28,
-            ),
+            icon: const Icon(Icons.menu, color: AppColors.background, size: 28),
             onPressed: () {
               Scaffold.of(context).openDrawer();
             },
@@ -199,7 +208,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       child: ClipOval(
-                        child: (profilePicture != null && profilePicture.trim().isNotEmpty)
+                        child:
+                            (profilePicture != null &&
+                                profilePicture.trim().isNotEmpty)
                             ? Image.network(
                                 profilePicture.trim(),
                                 fit: BoxFit.cover,
@@ -241,10 +252,7 @@ class _HomePageState extends State<HomePage> {
             Obx(() {
               if (ongoingBookingController.isLoading.value) {
                 return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Loading(),
-                  ),
+                  child: Padding(padding: EdgeInsets.all(40), child: Loading()),
                 );
               }
 
@@ -276,7 +284,9 @@ class _HomePageState extends State<HomePage> {
                 children: List.generate(
                   ongoingBookingController.bookings.length,
                   (index) {
-                    final booking = ongoingBookingController.bookings.elementAt(index);
+                    final booking = ongoingBookingController.bookings.elementAt(
+                      index,
+                    );
 
                     return _buildPatientCard(
                       context,
@@ -303,6 +313,13 @@ class _HomePageState extends State<HomePage> {
                       },
                       totalAmount: booking.totalAmount,
                       advanceAmount: booking.advanceAmount,
+                      isReassigned: booking.isCurrentlyReassigned,
+                      reassignedTo:
+                          booking.reassignmentStatus?.reassignedTo ?? "",
+                      startDate: booking.reassignmentStatus?.startDate ?? "",
+                      endDate: booking.reassignmentStatus?.endDate ?? "",
+                      progress:
+                          booking.reassignmentStatus?.completionPercentage ?? 0,
                     );
                   },
                 ),
@@ -330,6 +347,11 @@ class _HomePageState extends State<HomePage> {
     required Map<String, String> serviceDetails,
     required String totalAmount,
     required String advanceAmount,
+    required bool isReassigned,
+    String? reassignedTo,
+    String? startDate,
+    String? endDate,
+    double? progress,
   }) {
     final isExpanded = expandedStates[index] ?? false;
 
@@ -378,7 +400,9 @@ class _HomePageState extends State<HomePage> {
               IconButton(
                 onPressed: () => _toggleExpansion(index),
                 icon: Icon(
-                  isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                   color: AppColors.textPrimary,
                   size: 24,
                 ),
@@ -399,10 +423,7 @@ class _HomePageState extends State<HomePage> {
                 size: 16,
               ),
               const SizedBox(width: 6),
-              Text(
-                gender,
-                style: AppTextStyles.small,
-              ),
+              Text(gender, style: AppTextStyles.small),
               const SizedBox(width: 16),
               const Icon(
                 Icons.access_time,
@@ -440,11 +461,60 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          // Reassignment Banner
+          if (isReassigned) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "🔁 Reassigned Booking",
+                    style: AppTextStyles.small.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (reassignedTo != null && reassignedTo.trim().isNotEmpty)
+                    Text(
+                      "Caretaker: $reassignedTo",
+                      style: AppTextStyles.small.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  if (startDate != null && endDate != null)
+                    Text(
+                      "Duration: $startDate → $endDate",
+                      style: AppTextStyles.small.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  if (progress != null)
+                    Text(
+                      "Progress: ${progress.toStringAsFixed(0)}%",
+                      style: AppTextStyles.small.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
 
           // Expanded Content
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 300),
-            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             firstChild: const SizedBox.shrink(),
             secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,7 +612,8 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () {
                       Get.to(
                         () => BookingDetailsPage(
-                          bookingId: ongoingBookingController.bookings[index].id,
+                          bookingId:
+                              ongoingBookingController.bookings[index].id,
                         ),
                       );
                     },
@@ -556,9 +627,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: Text(
                       "Attendance & Tasks",
-                      style: AppTextStyles.button.copyWith(
-                        fontSize: 14,
-                      ),
+                      style: AppTextStyles.button.copyWith(fontSize: 14),
                     ),
                   ),
                 ),
@@ -582,7 +651,10 @@ class _HomePageState extends State<HomePage> {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      side: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),

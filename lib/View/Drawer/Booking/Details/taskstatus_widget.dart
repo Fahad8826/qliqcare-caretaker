@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
-import 'package:qlickcare/Model/bookingdetails_model.dart';
+import 'package:qlickcare/Controllers/bookings/bookingdetailscontroller.dart';
+import 'package:qlickcare/Model/bookings/Details/bookingdetails_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 
 final detailsController = BookingDetailsController();

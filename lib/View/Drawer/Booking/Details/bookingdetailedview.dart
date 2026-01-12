@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Controllers/attendancecontroller.dart';
-import 'package:qlickcare/Controllers/bookingdetailscontroller.dart';
-import 'package:qlickcare/Model/bookingdetails_model.dart';
+import 'package:qlickcare/Controllers/bookings/bookingdetailscontroller.dart';
+import 'package:qlickcare/Model/bookings/Details/bookingdetails_model.dart';
 import 'package:qlickcare/Services/attendaceservice.dart';
 import 'package:qlickcare/Services/locationguard.dart';
 import 'package:qlickcare/Services/locationservice.dart';
@@ -11,10 +11,12 @@ import 'package:qlickcare/Services/slidingservice.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
-import 'package:qlickcare/View/Drawer/Booking/bookingattendaces.dart';
-import 'package:qlickcare/View/Drawer/Booking/taskstatus_widget.dart';
+
+import 'package:qlickcare/View/Drawer/Booking/Details/booking_period_card.dart';
+import 'package:qlickcare/View/Drawer/Booking/Details/bookingattendaces.dart';
+import 'package:qlickcare/View/Drawer/Booking/Details/taskstatus_widget.dart';
 import 'package:qlickcare/View/listnotification.dart';
-import 'package:intl/intl.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 class BookingDetailsPage extends StatelessWidget {
@@ -190,8 +192,8 @@ class BookingDetailsPage extends StatelessWidget {
 
               SizedBox(height: size.height * 0.02),
 
-              // Booking Period Card
-              _buildBookingPeriodCard(size, b),
+              // Booking Attendance Summary
+              BookingPeriodCard(booking:  b),
 
               SizedBox(height: size.height * 0.02),
 
@@ -673,138 +675,6 @@ class BookingDetailsPage extends StatelessWidget {
     );
   }
 
-  // Booking Period Card
-  Widget _buildBookingPeriodCard(Size size, BookingDetails b) {
-    if (b.startDate.isEmpty || b.endDate.isEmpty) {
-      return SizedBox.shrink();
-    }
-
-    try {
-      final startDate = DateTime.parse(b.startDate);
-      final endDate = DateTime.parse(b.endDate);
-      final duration = endDate.difference(startDate).inDays + 1;
-
-      return Container(
-        padding: EdgeInsets.all(size.width * 0.04),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Booking Period",
-              style: AppTextStyles.heading2.copyWith(
-                fontSize: size.width * 0.04,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            SizedBox(height: size.height * 0.015),
-
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Start Date",
-                        style: AppTextStyles.small.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        DateFormat('dd MMM yyyy').format(startDate),
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  height: 40,
-                  width: 1,
-                  color: AppColors.textSecondary.withOpacity(0.2),
-                ),
-                SizedBox(width: size.width * 0.04),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "End Date",
-                        style: AppTextStyles.small.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        DateFormat('dd MMM yyyy').format(endDate),
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: size.height * 0.01),
-
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: size.width * 0.03,
-                vertical: size.height * 0.01,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                "Duration: $duration days",
-                style: AppTextStyles.body.copyWith(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print("Error parsing dates: $e");
-      return SizedBox.shrink();
-    }
-  }
-
-  bool isBookingCompleted(String endDateStr) {
-    try {
-      final endDate = DateTime.parse(endDateStr);
-      final today = DateTime.now();
-
-      // Compare only date (remove time)
-      final end = DateTime(endDate.year, endDate.month, endDate.day);
-      final now = DateTime(today.year, today.month, today.day);
-
-      return end.isBefore(now);
-    } catch (e) {
-      debugPrint("Date parse error: $e");
-      return false;
-    }
-  }
 
   Widget _buildInfoRow(Size size, IconData icon, String label, String value) {
     return Padding(

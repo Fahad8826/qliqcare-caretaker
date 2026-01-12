@@ -1,6 +1,8 @@
 
 
 import 'package:qlickcare/Model/attendance/bookingattendance_model.dart';
+import 'package:qlickcare/Model/bookings/Details/myreassaignmentperiod.dart';
+import 'package:qlickcare/Model/bookings/Details/reassaignmnetinfo_model.dart';
 
 
 
@@ -43,6 +45,9 @@ class BookingDetails {
   final bool? canCheckOut; // NEW
   final String createdAt;
   final String updatedAt;
+  final ReassignmentInfo? reassignmentInfo;
+  final List<MyReassignmentPeriod>? myReassignmentPeriods;
+
 
   BookingDetails({
     required this.id,
@@ -83,6 +88,9 @@ class BookingDetails {
     this.todayAttendance,
     this.canCheckIn,
     this.canCheckOut,
+    this.reassignmentInfo,
+    this.myReassignmentPeriods,
+
   });
 
   factory BookingDetails.fromJson(Map<String, dynamic> json) {
@@ -133,6 +141,13 @@ class BookingDetails {
           : null,
       canCheckIn: json['can_check_in'],
       canCheckOut: json['can_check_out'],
+      reassignmentInfo: json['reassignment_info'] != null
+    ? ReassignmentInfo.fromJson(json['reassignment_info'])
+    : null,
+    myReassignmentPeriods: (json['my_reassignment_periods'] as List? ?? [])
+    .map((e) => MyReassignmentPeriod.fromJson(e))
+    .toList(),
+
     );
   }
 }

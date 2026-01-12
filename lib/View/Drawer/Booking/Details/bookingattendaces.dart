@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:qlickcare/Model/attendance/attendencestatus_model.dart';
-import 'package:qlickcare/Model/bookingdetails_model.dart';
+import 'package:qlickcare/Model/bookings/Details/bookingdetails_model.dart';
 import 'package:qlickcare/Model/attendance/bookingattendance_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 
