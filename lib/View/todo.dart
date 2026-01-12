@@ -214,6 +214,7 @@ class _todoState extends State<todo> {
                       booking.todos,
                       detailsController.isOnLeaveToday,
                       booking.endDate,
+                      detailsController,
                     ),
 
                     SizedBox(height: size.height * 0.03),
@@ -589,100 +590,135 @@ class _todoState extends State<todo> {
   }
 
   Widget _buildTaskList(
-    Size size,
-    List<TodoItem> todos,
-    bool isOnLeaveToday,
-    String endDate,
-  ) {
-    // Disable actions if on leave or booking is completed
-    final bool disableActions = isOnLeaveToday || isBookingCompleted(endDate);
+  Size size,
+  List<TodoItem> todos,
+  bool isOnLeaveToday,
+  String endDate,
+   detailsController,
+) {
+  final booking = detailsController.booking.value;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: size.height * 0.015,
-        horizontal: size.width * 0.02,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  /// ALL DISABLING RULES HERE
+  final bool disableActions =
+      isOnLeaveToday ||
+      isBookingCompleted(endDate) ||
+      detailsController.isCheckedOutToday ||
+      (booking?.booking_status.toUpperCase() == "CANCELED") ||
+      (booking?.booking_status.toUpperCase() == "PENDING") ||
+      (booking?.booking_status.toUpperCase() == "WORK_COMPLETED");
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      /// 🔶 TOP BANNER MESSAGE WHEN DISABLED
+      if (disableActions)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
           ),
-        ],
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: todos.length,
-        separatorBuilder: (context, index) =>
-            const Divider(height: 1, color: Color(0xFFEAEAEA)),
-        itemBuilder: (context, index) {
-          final task = todos[index];
-          final bool isCompleted = task.isCompleted;
+          child: Text(
+            "Task actions are disabled.",
+            style: AppTextStyles.small.copyWith(
+              color: Colors.orange.shade900,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                /// TASK TEXT
-                Expanded(
-                  child: Text(
-                    task.text ?? "No Task",
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textPrimary,
-                      decoration: isCompleted
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
+      /// 📝 TASK LIST UI
+      Container(
+        padding: EdgeInsets.symmetric(
+          vertical: size.height * 0.015,
+          horizontal: size.width * 0.02,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: todos.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, color: Color(0xFFEAEAEA)),
+          itemBuilder: (context, index) {
+            final task = todos[index];
+            final bool isCompleted = task.isCompleted;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  /// TASK TEXT
+                  Expanded(
+                    child: Text(
+                      task.text ?? "No Task",
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.textPrimary,
+                        decoration: isCompleted
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
                     ),
                   ),
-                ),
 
-                /// TIME + CHECK ICON
-                Row(
-                  children: [
-                    Text(
-                      task.time ?? "N/A",
-                      style: AppTextStyles.small.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: size.width * 0.02),
-
-                    /// CLICKABLE ICON
-                    GestureDetector(
-                      onTap: disableActions
-                          ? null
-                          : () {
-                              detailsController.updateTodoStatus(
-                                task.id,
-                                !task.isCompleted,
-                              );
-                            },
-                      child: Opacity(
-                        opacity: disableActions ? 0.4 : 1.0,
-                        child: Icon(
-                          isCompleted
-                              ? FontAwesomeIcons.solidCircleCheck
-                              : FontAwesomeIcons.circle,
-                          color: isCompleted
-                              ? AppColors.success
-                              : AppColors.textSecondary.withOpacity(0.5),
-                          size: 20,
+                  /// TIME + ICON
+                  Row(
+                    children: [
+                      Text(
+                        task.time ?? "N/A",
+                        style: AppTextStyles.small.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+                      SizedBox(width: size.width * 0.02),
+
+                      /// CHECK ICON CLICK
+                      GestureDetector(
+                        onTap: disableActions
+                            ? null
+                            : () {
+                                detailsController.updateTodoStatus(
+                                  task.id,
+                                  !task.isCompleted,
+                                );
+                              },
+                        child: Opacity(
+                          opacity: disableActions ? 0.4 : 1.0,
+                          child: Icon(
+                            isCompleted
+                                ? FontAwesomeIcons.solidCircleCheck
+                                : FontAwesomeIcons.circle,
+                            color: isCompleted
+                                ? AppColors.success
+                                : AppColors.textSecondary.withOpacity(0.5),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
-    );
-  }
+    ],
+  );
+}
+
 }

@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkUserFlow() async {
-    await Future.delayed(const Duration(seconds: 2)); // splash delay
+    await Future.delayed(const Duration(seconds: 1)); // splash delay
 
     final prefs = await SharedPreferences.getInstance();
     final accessToken = await TokenService.getAccessToken();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:qlickcare/Controllers/logoutcontroller.dart';
 import 'package:qlickcare/Controllers/whtasappcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
 import 'package:qlickcare/Services/logoutdailoge.dart';

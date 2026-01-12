@@ -15,6 +15,7 @@ class BookingView extends StatelessWidget {
     BookingController(),
     tag: 'allbookings',
   );
+  
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +74,12 @@ class BookingView extends StatelessWidget {
                       isSelected: controller.selectedFilter.value == "WORK_COMPLETED",
                       onTap: () => controller.filterBookings("WORK_COMPLETED"),
                     ),
+                      _FilterTab(
+                      label: "Canceled",
+                      isSelected: controller.selectedFilter.value == "CANCELED",
+                      onTap: () => controller.filterBookings("CANCELED"),
+                    ),
+                    
                   ],
                 ),
               ),
@@ -178,8 +185,14 @@ class _BookingCard extends StatelessWidget {
 
   const _BookingCard({required this.booking});
 
+  
+
   @override
   Widget build(BuildContext context) {
+    final showButton =
+    booking.booking_status.toUpperCase() == "ONGOING" ||
+    booking.booking_status.toUpperCase() == "WORK_COMPLETED";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -279,34 +292,30 @@ class _BookingCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Patient Details Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.to(() => BookingDetailsPage(bookingId: booking.id));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text(
-                  "Patient Details",
-                  style: AppTextStyles.body.copyWith(
-                    fontSize: 13,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            if (showButton)
+  Align(
+    alignment: Alignment.centerRight,
+    child: ElevatedButton(
+      onPressed: () {
+        Get.to(() => BookingDetailsPage(bookingId: booking.id));
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      child: Text(
+        "Patient Details",
+        style: AppTextStyles.body.copyWith(
+          fontSize: 13,
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+  ),
           ],
         ),
       ),
