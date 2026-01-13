@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:qlickcare/Controllers/bookings/bookingdetailscontroller.dart';
 import 'package:qlickcare/Model/bookings/Details/bookingdetails_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 
-final detailsController = BookingDetailsController();
-
+final detailsController = Get.find<BookingDetailsController>();
 /// Returns true if the booking end date is before today.
 bool isBookingCompleted(String endDate) {
   if (endDate.isEmpty) return false;

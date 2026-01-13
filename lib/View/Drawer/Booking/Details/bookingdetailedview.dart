@@ -234,6 +234,7 @@ class BookingDetailsPage extends StatelessWidget {
                 startDate: DateTime.parse(b.startDate),
                 endDate: DateTime.parse(b.endDate),
                 attendanceData: attendanceDataFromApi(b),
+               reassignmentPeriods: b.myReassignmentPeriods,
               ),
 
               SizedBox(height: size.height * 0.03),

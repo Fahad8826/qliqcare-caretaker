@@ -224,6 +224,7 @@ class _todoState extends State<todo> {
                       startDate: DateTime.parse(booking.startDate),
                       endDate: DateTime.parse(booking.endDate),
                       attendanceData: attendanceDataFromApi(booking),
+                      reassignmentPeriods: booking.myReassignmentPeriods,
                     ),
 
                     SizedBox(height: size.height * 0.03),
@@ -603,10 +604,9 @@ class _todoState extends State<todo> {
       isOnLeaveToday ||
       isBookingCompleted(endDate) ||
       detailsController.isCheckedOutToday ||
-      (booking?.booking_status.toUpperCase() == "CANCELED") ||
-      (booking?.booking_status.toUpperCase() == "PENDING") ||
-      (booking?.booking_status.toUpperCase() == "WORK_COMPLETED");
-
+       (booking?.bookingStatus.toUpperCase() == "CANCELED") ||  // ✅ FIXED
+      (booking?.bookingStatus.toUpperCase() == "PENDING") ||   // ✅ FIXED
+      (booking?.bookingStatus.toUpperCase() == "WORK_COMPLETED"); // ✅ FIXED
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
