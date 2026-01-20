@@ -339,7 +339,7 @@ class BookingDetailsPage extends StatelessWidget {
       return LocationGuard(
         targetLatitude: bookingLat,
         targetLongitude: bookingLng,
-        radiusInMeters: 1000000.0, // Adjust as needed
+        radiusInMeters: 500.0, // Adjust as needed
         showDistance: true,
         autoRefresh: false, // Set to true if you want periodic location updates
         refreshIntervalSeconds: 30,

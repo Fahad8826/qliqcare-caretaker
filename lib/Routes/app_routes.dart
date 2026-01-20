@@ -25,6 +25,7 @@ class AppRoutes {
   static const String payslipList = '/payslipList';
   static const String leaveAttendance = '/leaveAttendance';
   static const String settings = '/leave';
+  
 
   static final pages = [
     GetPage(name: splash, page: () => SplashScreen()),

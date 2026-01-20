@@ -11,45 +11,7 @@ class ComplaintController extends GetxController {
   var complaints = <ComplaintItem>[].obs;
   var complaintDetail = Rxn<ComplaintDetail>();
 
-  // ---------------------------
-  // SUBMIT COMPLAINT
-  // ---------------------------
-  // Future<void> submitComplaint({
-  //   required String subject,
-  //   required String description,
-  //   required String priority,
-  // }) async {
-  //   try {
-  //     isLoading.value = true;
 
-  //     final token = await TokenService.getAccessToken();
-  //     final baseUrl = dotenv.env['BASE_URL']!;
-  //     final url = Uri.parse("$baseUrl/api/caretaker/complaints/");
-
-  //     final response = await http.post(
-  //       url,
-  //       headers: {
-  //         "Authorization": "Bearer $token",
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: jsonEncode({
-  //         "subject": subject,
-  //         "description": description,
-  //         "priority": priority,
-  //       }),
-  //     );
-
-  //     if (response.statusCode == 201) {
-  //       Get.snackbar("Success", "Complaint submitted");
-  //       fetchMyComplaints();
-  //     } else {
-  //       print("Submit Error: ${response.body}");
-  //       Get.snackbar("Error", "Failed to submit complaint");
-  //     }
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
 Future<void> submitComplaint({
   required String subject,
   required String description,
@@ -88,38 +50,6 @@ Future<void> submitComplaint({
   }
 }
 
-  // ---------------------------
-  // GET COMPLAINT LIST
-  // ---------------------------
-  // Future<void> fetchMyComplaints() async {
-  //   try {
-  //     isLoading.value = true;
-
-  //     final token = await TokenService.getAccessToken();
-  //     final baseUrl = dotenv.env['BASE_URL']!;
-  //     final url = Uri.parse("$baseUrl/api/caretaker/complaints/");
-
-  //     final response = await http.get(
-  //       url,
-  //       headers: {"Authorization": "Bearer $token"},
-  //     );
-
-  //     print("LIST RESPONSE: ${response.body}");
-
-  //     if (response.statusCode == 200) {
-  //       final decoded = jsonDecode(response.body);
-
-  //       // Extract list from "complaints"
-  //       final List items = decoded["complaints"] ?? [];
-
-  //       complaints.value = items.map((e) => ComplaintItem.fromJson(e)).toList();
-  //     } else {
-  //       print("List Error: ${response.body}");
-  //     }
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
   Future<void> fetchMyComplaints() async {
   try {
     isLoading.value = true;
@@ -153,34 +83,7 @@ Future<void> submitComplaint({
 }
 
 
-  // ---------------------------
-  // GET COMPLAINT DETAIL
-  // ---------------------------
-  // Future<void> fetchComplaintDetail(int id) async {
-  //   try {
-  //     isLoading.value = true;
 
-  //     final token = await TokenService.getAccessToken();
-  //     final baseUrl = dotenv.env['BASE_URL']!;
-  //     final url = Uri.parse("$baseUrl/api/caretaker/complaints/$id/");
-
-  //     final response = await http.get(
-  //       url,
-  //       headers: {"Authorization": "Bearer $token"},
-  //     );
-
-  //     print("DETAIL RESPONSE: ${response.body}");
-
-  //     if (response.statusCode == 200) {
-  //       final decoded = jsonDecode(response.body);
-  //       complaintDetail.value = ComplaintDetail.fromJson(decoded);
-  //     } else {
-  //       print("Detail Error: ${response.body}");
-  //     }
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
   Future<void> fetchComplaintDetail(int id) async {
   try {
     isLoading.value = true;

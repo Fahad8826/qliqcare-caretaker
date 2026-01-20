@@ -323,7 +323,7 @@ class _todoState extends State<todo> {
     return LocationGuard(
       targetLatitude: bookingLat,
       targetLongitude: bookingLng,
-      radiusInMeters: 1000000.0,
+      radiusInMeters: 500.0,
       showDistance: true,
       autoRefresh: false,
       refreshIntervalSeconds: 30,

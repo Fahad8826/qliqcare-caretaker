@@ -5,6 +5,7 @@ import 'package:qlickcare/Controllers/whtasappcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
 import 'package:qlickcare/Services/logoutdailoge.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
+import 'package:qlickcare/View/Drawer/listchat.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -146,13 +147,25 @@ class AppDrawer extends StatelessWidget {
                   Get.toNamed('/leave');
                 },
               ),
+
+              drawerItem(
+                icon: FontAwesomeIcons.fileCircleCheck,
+                title: "chat",
+                onTap: () {
+                  Get.to(ChatListPage());
+                },
+              ),
               drawerItem(
                 icon: FontAwesomeIcons.fileLines,
                 title: "Privacy Policy",
                 onTap: () async {
-                  const url = 'https://www.freeprivacypolicy.com/live/40d61b74-e512-4397-a315-c8dc3b3197ee';
+                  const url =
+                      'https://www.freeprivacypolicy.com/live/40d61b74-e512-4397-a315-c8dc3b3197ee';
                   if (await canLaunchUrl(Uri.parse(url))) {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                    await launchUrl(
+                      Uri.parse(url),
+                      mode: LaunchMode.externalApplication,
+                    );
                   } else {
                     Get.snackbar('Error', 'Could not launch Privacy Policy');
                   }
@@ -172,7 +185,7 @@ class AppDrawer extends StatelessWidget {
                 color: AppColors.success,
                 onTap: () {
                   waController.openWhatsApp(
-                    "9061750540", // mobile number with country code
+                    "7795009077", // mobile number with country code
                     message:
                         "Hello!  Iam ${profile?.fullName ?? "User"}, I need assistance.", // default message
                   );
@@ -213,5 +226,4 @@ class AppDrawer extends StatelessWidget {
   }
 
   // ---------------- LOGOUT CONFIRMATION ----------------
-  
 }

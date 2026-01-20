@@ -643,8 +643,8 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => ChatDetailScreen(
-                            name: customerName,
-                            status: "Online",
+                            chatId: ongoingBookingController
+                                .bookings[index].id,
                           ),
                         ),
                       );

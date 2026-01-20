@@ -22,16 +22,8 @@ class WebSocketService {
   /// Connect to WebSocket for a specific chat room
   Future<void> connect(int roomId) async {
     try {
-      // If already connected to this room, skip
-      if (_isConnected && _currentRoomId == roomId && _webSocket != null) {
-        print('✅ Already connected to room $roomId');
-        return;
-      }
-
       // Close existing connection if any
-      if (_webSocket != null && _currentRoomId != roomId) {
-        await disconnect();
-      }
+      await disconnect();
 
       _currentRoomId = roomId;
       
@@ -58,7 +50,7 @@ class WebSocketService {
       
       print('🔌 Connecting to WebSocket: $wsUrl');
 
-      // Create WebSocket connection with shorter timeout
+      // Create WebSocket connection using dart:io
       _webSocket = await WebSocket.connect(
         wsUrl,
         headers: {
@@ -66,7 +58,7 @@ class WebSocketService {
           'Upgrade': 'websocket',
         },
       ).timeout(
-        const Duration(seconds: 5), // Reduced from 10 to 5 seconds
+        const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException('WebSocket connection timeout');
         },
@@ -172,12 +164,7 @@ class WebSocketService {
     if (_webSocket != null) {
       print('🔌 Disconnecting WebSocket from room $_currentRoomId');
       try {
-        await _webSocket!.close(1000, 'Normal closure').timeout(
-          const Duration(milliseconds: 500),
-          onTimeout: () {
-            print('⚠️ WebSocket close timeout - forcing disconnect');
-          },
-        );
+        await _webSocket!.close();
       } catch (e) {
         print('⚠️ Error closing WebSocket: $e');
       }
