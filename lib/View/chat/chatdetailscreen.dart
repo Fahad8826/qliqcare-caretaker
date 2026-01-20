@@ -1,7 +1,3 @@
-
- 
- 
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -13,223 +9,255 @@ import 'package:qlickcare/controllers/chat_controller.dart';
 import 'package:qlickcare/Model/chat_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 
-class ChatDetailScreen extends StatelessWidget {
+class ChatDetailScreen extends StatefulWidget {
   final int chatId;
   const ChatDetailScreen({super.key, required this.chatId});
 
   @override
-  Widget build(BuildContext context) {
-    final ChatController controller = Get.find<ChatController>();
-    final TextEditingController messageController = TextEditingController();
-    final ScrollController scrollController = ScrollController();
-    final ImagePicker picker = ImagePicker();
-    final size = MediaQuery.of(context).size;
-    final orientation = MediaQuery.of(context).orientation;
-    final isPortrait = orientation == Orientation.portrait;
+  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
+}
 
-    // Initialize on first build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadChatData(controller, scrollController);
-      _setupListeners(controller, scrollController);
-    });
+class _ChatDetailScreenState extends State<ChatDetailScreen> {
+  late final ChatController _controller;
+  late final TextEditingController _messageController;
+  late final ScrollController _scrollController;
+  final ImagePicker _picker = ImagePicker();
+  
+  bool _isInitialized = false;
+  bool _isLoadingInitialData = true;
 
-    return Scaffold(
-      backgroundColor: AppColors.screenBackground,
-      body: Column(
-        children: [
-          // Green Header with Profile Info
-          _buildHeader(context, controller, size, isPortrait),
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.find<ChatController>();
+    _messageController = TextEditingController();
+    _scrollController = ScrollController();
+    
+    // Setup scroll listener for pagination
+    _scrollController.addListener(_onScroll);
+    
+    // Initialize data loading
+    _initializeChat();
+  }
 
-          // Chat Messages
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoadingMessages.value &&
-                  controller.messages.isEmpty) {
-                return const Center(child: Loading());
-              }
-
-              if (controller.messages.isEmpty) {
-                return const Center(child: Text("No messages yet"));
-              }
-
-              return ListView.builder(
-                controller: scrollController,
-                padding: EdgeInsets.symmetric(
-                  horizontal: size.width * 0.04,
-                  vertical: size.height * 0.02,
-                ),
-                itemCount: controller.messages.length + 1,
-                itemBuilder: (_, i) {
-                  // Show loading indicator at the top (index 0)
-                  if (i == 0) {
-                    return Obx(
-                      () => controller.isLoadingMore.value
-                          ? const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    );
-                  }
-
-                  // Adjust index since we added loading at top
-                  final msg = controller.messages[i - 1];
-                  return _buildMessage(context, msg, size, isPortrait);
-                },
-              );
-            }),
+  /// Initializes chat with proper loading sequence
+  Future<void> _initializeChat() async {
+    if (_isInitialized) return;
+    
+    setState(() => _isLoadingInitialData = true);
+    
+    try {
+      // STEP 1: Load messages first (most important data)
+      await _controller.fetchMessages(widget.chatId);
+      
+      // STEP 2: Load chat details (can fail without breaking chat)
+      _controller.fetchChatDetail(widget.chatId).catchError((e) {
+        print('⚠️ Failed to load chat details: $e');
+        // Don't throw, chat can still work
+      });
+      
+      // STEP 3: Setup message listener BEFORE connecting WebSocket
+      _setupMessageListener();
+      
+      // STEP 4: Connect WebSocket (now listener is ready)
+      await _controller.connectWebSocket(widget.chatId);
+      
+      _isInitialized = true;
+      
+      // STEP 5: Scroll to bottom after messages are rendered
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animate: false);
+        });
+      }
+      
+      print('✅ Chat initialized successfully');
+    } catch (e) {
+      print('❌ Error initializing chat: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load chat: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () {
+                _isInitialized = false;
+                _initializeChat();
+              },
+            ),
           ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingInitialData = false);
+      }
+    }
+  }
 
-          // Message Input
-          _buildInput(
-            context,
-            controller,
-            messageController,
-            scrollController,
-            picker,
-            size,
-            isPortrait,
-          ),
-        ],
-      ),
+  void _setupMessageListener() {
+    _controller.wsService.messageStream.listen(
+      (msg) {
+        print('🎯 New message received: ${msg.id} - ${msg.content}');
+        // Auto-scroll when new message arrives
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_isNearBottom()) {
+            _scrollToBottom();
+          }
+        });
+      },
+      onError: (error) {
+        print('❌ Message stream error: $error');
+      },
     );
   }
 
-  void _loadChatData(ChatController controller, ScrollController scrollController) async {
-    // Start WebSocket connection immediately (non-blocking)
-    controller.connectWebSocket(chatId);
-
-    // Load chat details and messages in parallel
-    await Future.wait([
-      controller.fetchChatDetail(chatId),
-      controller.fetchMessages(chatId),
-    ]);
-
-    // Scroll to bottom after messages loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom(scrollController);
-    });
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    // Load more messages when scrolling near top
+    if (_scrollController.position.pixels <= 
+        _scrollController.position.minScrollExtent + 100) {
+      _controller.loadMoreMessages(widget.chatId);
+    }
   }
 
-  void _setupListeners(ChatController controller, ScrollController scrollController) {
-    /// Auto-scroll when new message comes
-    controller.wsService.messageStream.listen((msg) {
-      print('🎯 Detail page received message: ${msg.id} - ${msg.content}');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom(scrollController);
-      });
-    });
-
-    /// Load more messages when scroll to top
-    scrollController.addListener(() {
-      if (scrollController.position.pixels <=
-          scrollController.position.minScrollExtent + 100) {
-        // near top
-        controller.loadMoreMessages(chatId);
-      }
-    });
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return false;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    return (maxScroll - currentScroll) < 100; // Within 100 pixels of bottom
   }
 
-  void _scrollToBottom(ScrollController scrollController) {
-    if (scrollController.hasClients) {
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
+  void _scrollToBottom({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    
+    if (animate) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+    } else {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
     }
   }
 
-  Future<void> _sendMessage(
-    ChatController controller,
-    TextEditingController messageController,
-    ScrollController scrollController,
-  ) async {
-    final text = messageController.text.trim();
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    messageController.clear();
-    await controller.sendMessage(chatId, text);
-
-    // Scroll to bottom after sending
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom(scrollController);
-    });
-  }
-
-  Future<void> _pickImage(
-    ImageSource src,
-    ChatController controller,
-    ImagePicker picker,
-    ScrollController scrollController,
-  ) async {
-    final XFile? image = await picker.pickImage(source: src, imageQuality: 80);
-
-    if (image != null) {
-      await controller.sendFileMessage(chatId, image.path, image.name);
+    // Clear input immediately for better UX
+    _messageController.clear();
+    
+    // Hide keyboard
+    FocusScope.of(context).unfocus();
+    
+    try {
+      await _controller.sendMessage(widget.chatId, text);
+      
+      // Scroll to bottom after sending
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom(scrollController);
+        _scrollToBottom();
       });
+    } catch (e) {
+      print('❌ Error sending message: $e');
+      // Optionally restore the message text on error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send message')),
+        );
+      }
     }
   }
 
-  Future<void> _pickFile(
-    ChatController controller,
-    ScrollController scrollController,
-  ) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-    );
-
-    if (result != null && result.files.single.path != null) {
-      await controller.sendFileMessage(
-        chatId,
-        result.files.single.path!,
-        result.files.single.name,
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
       );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom(scrollController);
-      });
+
+      if (image != null) {
+        await _controller.sendFileMessage(
+          widget.chatId,
+          image.path,
+          image.name,
+        );
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+      }
+    } catch (e) {
+      print('❌ Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick image')),
+        );
+      }
     }
   }
 
-  void _showAttachmentOptions(
-    BuildContext context,
-    ChatController controller,
-    ImagePicker picker,
-    ScrollController scrollController,
-  ) {
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        await _controller.sendFileMessage(
+          widget.chatId,
+          result.files.single.path!,
+          result.files.single.name,
+        );
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+      }
+    } catch (e) {
+      print('❌ Error picking file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to pick file')),
+        );
+      }
+    }
+  }
+
+  void _showAttachmentOptions() {
     showModalBottomSheet(
       context: context,
-      builder: (_) => SafeArea(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Gallery'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.gallery, controller, picker, scrollController);
+                _pickImage(ImageSource.gallery);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
               title: const Text('Camera'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.camera, controller, picker, scrollController);
+                _pickImage(ImageSource.camera);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.attach_file),
+              leading: const Icon(Icons.attach_file, color: AppColors.primary),
               title: const Text('File'),
               onTap: () {
                 Navigator.pop(context);
-                _pickFile(controller, scrollController);
+                _pickFile();
               },
             ),
           ],
@@ -238,12 +266,100 @@ class ChatDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    ChatController controller,
-    Size size,
-    bool isPortrait,
-  ) {
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    _controller.disconnectWebSocket();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final orientation = MediaQuery.of(context).orientation;
+    final isPortrait = orientation == Orientation.portrait;
+
+    return Scaffold(
+      backgroundColor: AppColors.screenBackground,
+      body: Column(
+        children: [
+          // Header
+          _buildHeader(size, isPortrait),
+
+          // Messages List
+          Expanded(
+            child: _isLoadingInitialData
+                ? const Center(child: Loading())
+                : Obx(() {
+                    if (_controller.messages.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "No messages yet",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Start the conversation!",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.04,
+                        vertical: size.height * 0.02,
+                      ),
+                      itemCount: _controller.messages.length + 1,
+                      itemBuilder: (context, index) {
+                        // Loading indicator at top
+                        if (index == 0) {
+                          return Obx(
+                            () => _controller.isLoadingMore.value
+                                ? const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    child: Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          );
+                        }
+
+                        final msg = _controller.messages[index - 1];
+                        return _buildMessage(msg, size, isPortrait);
+                      },
+                    );
+                  }),
+          ),
+
+          // Input Area
+          _buildInput(size, isPortrait),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Size size, bool isPortrait) {
     return Container(
       decoration: const BoxDecoration(color: AppColors.primary),
       child: SafeArea(
@@ -254,9 +370,8 @@ class ChatDetailScreen extends StatelessWidget {
             vertical: size.height * 0.015,
           ),
           child: Obx(() {
-            final chat = controller.selectedChat.value;
+            final chat = _controller.selectedChat.value;
             final patientName = chat?.bookingInfo.patientName ?? "Chat";
-            final status = chat?.bookingInfo.status ?? "Offline";
 
             return Row(
               children: [
@@ -269,20 +384,16 @@ class ChatDetailScreen extends StatelessWidget {
                     size: isPortrait ? size.width * 0.06 : size.height * 0.07,
                   ),
                 ),
-
                 SizedBox(width: size.width * 0.02),
 
-                // Profile Image - Letter Avatar
+                // Avatar
                 Container(
                   width: isPortrait ? size.width * 0.11 : size.height * 0.13,
                   height: isPortrait ? size.width * 0.11 : size.height * 0.13,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.buttonText.withOpacity(0.2),
-                    border: Border.all(
-                      color: AppColors.buttonText,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColors.buttonText, width: 2),
                   ),
                   child: Center(
                     child: Text(
@@ -295,7 +406,6 @@ class ChatDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 SizedBox(width: size.width * 0.03),
 
                 // Name and Status
@@ -313,9 +423,9 @@ class ChatDetailScreen extends StatelessWidget {
                       ),
                       SizedBox(height: size.height * 0.002),
                       StreamBuilder<bool>(
-                        stream: controller.wsService.connectionStream,
-                        builder: (_, snap) {
-                          final connected = snap.data ?? false;
+                        stream: _controller.wsService.connectionStream,
+                        builder: (context, snapshot) {
+                          final connected = snapshot.data ?? false;
                           return Row(
                             children: [
                               Icon(
@@ -364,9 +474,9 @@ class ChatDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage(BuildContext context, Message m, Size size, bool isPortrait) {
-    final isMe = m.senderType == "caretaker";
-    final url = m.getFileUrl(dotenv.env['BASE_URL']!);
+  Widget _buildMessage(Message msg, Size size, bool isPortrait) {
+    final isMe = msg.senderType == "caretaker";
+    final url = msg.getFileUrl(dotenv.env['BASE_URL']!);
 
     return Padding(
       padding: EdgeInsets.only(bottom: size.height * 0.015),
@@ -390,36 +500,27 @@ class ChatDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (m.messageType == 'image' && url != null)
+              // Image message
+              if (msg.messageType == 'image' && url != null)
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => Scaffold(
-                          backgroundColor: Colors.black,
-                          appBar: AppBar(
-                            backgroundColor: Colors.black,
-                            iconTheme: const IconThemeData(color: Colors.white),
-                          ),
-                          body: Center(
-                            child: InteractiveViewer(
-                              child: Image.network(
-                                url,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                  onTap: () => _showFullImage(url),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
                     child: Image.network(
                       url,
                       width: size.width * 0.6,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: size.width * 0.6,
+                          height: size.height * 0.2,
+                          color: Colors.grey.shade300,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           width: size.width * 0.6,
@@ -432,50 +533,14 @@ class ChatDetailScreen extends StatelessWidget {
                   ),
                 ),
 
-              if (m.messageType == 'file' && url != null)
-                GestureDetector(
-                  onTap: () {
-                    // You can add file download or preview functionality here
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('File: ${m.content}')),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isMe 
-                          ? AppColors.buttonText.withOpacity(0.2) 
-                          : AppColors.screenBackground,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.insert_drive_file,
-                          color: isMe ? AppColors.buttonText : AppColors.primary,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            m.content.isNotEmpty ? m.content : 'File',
-                            style: TextStyle(
-                              color: isMe ? AppColors.buttonText : AppColors.textPrimary,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              // File message
+              if (msg.messageType == 'file' && url != null)
+                _buildFileMessage(msg, isMe, url),
 
-              if (m.messageType == 'text' && m.content.isNotEmpty)
+              // Text message
+              if (msg.messageType == 'text' && msg.content.isNotEmpty)
                 Text(
-                  m.content,
+                  msg.content,
                   style: AppTextStyles.body.copyWith(
                     fontSize: 14,
                     color: isMe ? AppColors.buttonText : AppColors.textPrimary,
@@ -483,22 +548,16 @@ class ChatDetailScreen extends StatelessWidget {
                   ),
                 ),
 
-              if (m.messageType != 'image' && m.messageType != 'text' && m.messageType != 'file' && m.content.isEmpty)
-                Text(
-                  m.messageType.toUpperCase(),
-                  style: TextStyle(
-                    color: isMe ? AppColors.buttonText.withOpacity(0.7) : AppColors.textSecondary,
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-
               SizedBox(height: size.height * 0.004),
+              
+              // Time
               Text(
-                _format(m.sentAt),
+                _formatTime(msg.sentAt),
                 style: TextStyle(
                   fontSize: 11,
-                  color: isMe ? AppColors.buttonText.withOpacity(0.7) : AppColors.textSecondary,
+                  color: isMe 
+                      ? AppColors.buttonText.withOpacity(0.7) 
+                      : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -508,19 +567,72 @@ class ChatDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInput(
-    BuildContext context,
-    ChatController controller,
-    TextEditingController messageController,
-    ScrollController scrollController,
-    ImagePicker picker,
-    Size size,
-    bool isPortrait,
-  ) {
+  Widget _buildFileMessage(Message msg, bool isMe, String url) {
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('File: ${msg.content}')),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isMe 
+              ? AppColors.buttonText.withOpacity(0.2) 
+              : AppColors.screenBackground,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.insert_drive_file,
+              color: isMe ? AppColors.buttonText : AppColors.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                msg.content.isNotEmpty ? msg.content : 'File',
+                style: TextStyle(
+                  color: isMe ? AppColors.buttonText : AppColors.textPrimary,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullImage(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: Image.network(url, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput(Size size, bool isPortrait) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: size.width * 0.04,
-        vertical: size.height * 0.012,
+        vertical: size.height * 0.003,
       ),
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -536,12 +648,11 @@ class ChatDetailScreen extends StatelessWidget {
         top: false,
         child: Row(
           children: [
-            // Text Input
             Expanded(
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: size.width * 0.04,
-                  vertical: size.height * 0.008,
+                  vertical: size.height * 0.003,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.screenBackground,
@@ -551,7 +662,7 @@ class ChatDetailScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: TextField(
-                        controller: messageController,
+                        controller: _messageController,
                         decoration: InputDecoration(
                           hintText: "Message...",
                           hintStyle: AppTextStyles.body.copyWith(
@@ -566,7 +677,8 @@ class ChatDetailScreen extends StatelessWidget {
                           fontSize: 14,
                           color: AppColors.textPrimary,
                         ),
-                        onSubmitted: (_) => _sendMessage(controller, messageController, scrollController),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(),
                       ),
                     ),
                     IconButton(
@@ -575,7 +687,7 @@ class ChatDetailScreen extends StatelessWidget {
                         color: AppColors.textSecondary,
                         size: 22,
                       ),
-                      onPressed: () => _showAttachmentOptions(context, controller, picker, scrollController),
+                      onPressed: _showAttachmentOptions,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -583,12 +695,11 @@ class ChatDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             SizedBox(width: size.width * 0.02),
 
             // Send Button
             Obx(() {
-              return controller.isSendingMessage.value
+              return _controller.isSendingMessage.value
                   ? Container(
                       width: isPortrait ? size.width * 0.12 : size.height * 0.14,
                       height: isPortrait ? size.width * 0.12 : size.height * 0.14,
@@ -600,12 +711,12 @@ class ChatDetailScreen extends StatelessWidget {
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child:Loading(),
+                          child: Loading(),
                         ),
                       ),
                     )
                   : InkWell(
-                      onTap: () => _sendMessage(controller, messageController, scrollController),
+                      onTap: _sendMessage,
                       child: Container(
                         width: isPortrait ? size.width * 0.12 : size.height * 0.14,
                         height: isPortrait ? size.width * 0.12 : size.height * 0.14,
@@ -627,7 +738,7 @@ class ChatDetailScreen extends StatelessWidget {
     );
   }
 
-  String _format(String sent) {
+  String _formatTime(String sent) {
     try {
       final dt = DateTime.parse(sent);
       return DateFormat("hh:mm a").format(dt);

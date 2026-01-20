@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:web_socket_channel/io.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qlickcare/Services/tokenservice.dart';
 import 'package:qlickcare/Model/chat_model.dart';

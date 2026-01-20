@@ -12,7 +12,8 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
-  final ChatController controller = Get.put(ChatController());
+  // final ChatController controller = Get.put(ChatController());
+  final ChatController controller = Get.find<ChatController>();
 
   @override
   void initState() {
