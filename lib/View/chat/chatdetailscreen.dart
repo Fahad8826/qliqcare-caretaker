@@ -8,6 +8,7 @@ import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/controllers/chat_controller.dart';
 import 'package:qlickcare/Model/chat_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final int chatId;
@@ -32,9 +33,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _controller = Get.find<ChatController>();
     _messageController = TextEditingController();
     _scrollController = ScrollController();
-    
-    // Setup scroll listener for pagination
-    _scrollController.addListener(_onScroll);
     
     // Initialize data loading
     _initializeChat();
@@ -110,16 +108,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         print('❌ Message stream error: $error');
       },
     );
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    
-    // Load more messages when scrolling near top
-    if (_scrollController.position.pixels <= 
-        _scrollController.position.minScrollExtent + 100) {
-      _controller.loadMoreMessages(widget.chatId);
-    }
   }
 
   bool _isNearBottom() {
@@ -323,31 +311,55 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       );
                     }
 
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: size.width * 0.04,
-                        vertical: size.height * 0.02,
-                      ),
-                      itemCount: _controller.messages.length + 1,
-                      itemBuilder: (context, index) {
-                        // Loading indicator at top
-                        if (index == 0) {
-                          return Obx(
-                            () => _controller.isLoadingMore.value
-                                ? const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 8),
-                                    child: Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          );
+                    return NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        // Detect when user is scrolling up and approaching the top
+                        if (scrollInfo is ScrollUpdateNotification) {
+                          final position = _scrollController.position;
+                          
+                          // When user reaches top 300 pixels, start loading
+                          if (position.pixels <= position.minScrollExtent + 300) {
+                            if (!_controller.isLoadingMore.value && 
+                                _controller.hasMore.value) {
+                              _controller.loadMoreMessages(widget.chatId);
+                            }
+                          }
                         }
-
-                        final msg = _controller.messages[index - 1];
-                        return _buildMessage(msg, size, isPortrait);
+                        return false;
                       },
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: size.width * 0.04,
+                          vertical: size.height * 0.02,
+                        ),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _controller.messages.length + 1,
+                        itemBuilder: (context, index) {
+                          // Loading indicator at top
+                          if (index == 0) {
+                            return Obx(
+                              () => _controller.isLoadingMore.value
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox(height: 8),
+                            );
+                          }
+
+                          final msg = _controller.messages[index - 1];
+                          return _buildMessage(msg, size, isPortrait);
+                        },
+                      ),
                     );
                   }),
           ),
@@ -569,11 +581,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Widget _buildFileMessage(Message msg, bool isMe, String url) {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('File: ${msg.content}')),
-        );
-      },
+      onTap: () async {
+      try {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Cannot open this file')),
+            );
+          }
+        }
+      } catch (e) {
+        print('❌ Error opening file: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to open file: $e')),
+          );
+        }
+      }
+    },
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -632,7 +663,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: size.width * 0.04,
-        vertical: size.height * 0.003,
+        vertical: size.height * 0.012,
       ),
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -652,7 +683,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: size.width * 0.04,
-                  vertical: size.height * 0.003,
+                  vertical: size.height * 0.008,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.screenBackground,

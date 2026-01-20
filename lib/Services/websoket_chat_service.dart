@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qlickcare/Services/tokenservice.dart';
 import 'package:qlickcare/Model/chat_model.dart';
+import 'package:mime/mime.dart';
 
 class WebSocketService {
   WebSocket? _webSocket;
@@ -172,6 +173,54 @@ class WebSocketService {
     _isConnected = false;
     _currentRoomId = null;
     _connectionController.add(false);
+  }
+
+   Future<void> sendFileMessage({
+    required String filePath,
+    required String fileName,
+    required String messageType, // 'image' or 'file'
+    String? content,
+  }) async {
+    if (!_isConnected || _webSocket == null) {
+      print('❌ Cannot send file: WebSocket not connected');
+      throw Exception('WebSocket not connected');
+    }
+
+    try {
+      // Read file as bytes
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      
+      // Convert to base64
+      final base64Data = base64Encode(bytes);
+      
+      // Get MIME type
+      final mimeType = lookupMimeType(filePath) ?? 'application/octet-stream';
+      
+      print('📤 Preparing file upload:');
+      print('   File: $fileName');
+      print('   Type: $mimeType');
+      print('   Size: ${bytes.length} bytes');
+      print('   Base64 length: ${base64Data.length}');
+      
+      // Create payload in the exact format your WebSocket expects
+      final payload = jsonEncode({
+        'type': 'file_upload',
+        'message_type': messageType, // 'image' or 'file'
+        'file_name': fileName,
+        'file_type': mimeType,
+        'file_data': base64Data,
+        'content': content ?? fileName, // Optional caption/description
+      });
+
+      print('📤 Sending file via WebSocket...');
+      _webSocket!.add(payload);
+      print('✅ File sent successfully');
+      
+    } catch (e) {
+      print('❌ Error sending file: $e');
+      throw e;
+    }
   }
 
   /// Dispose streams

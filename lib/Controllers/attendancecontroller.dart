@@ -133,9 +133,7 @@ class AttendanceController extends GetxController {
     } else {
       Get.snackbar("Info", _extractMessage(data));
     }
-  } catch (e) {
-    Get.snackbar("Error", "Session expired. Please login again.");
-  } finally {
+  }  finally {
     isLoading.value = false;
   }
 }

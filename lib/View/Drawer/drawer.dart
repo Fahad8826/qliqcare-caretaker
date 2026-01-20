@@ -148,13 +148,13 @@ class AppDrawer extends StatelessWidget {
                 },
               ),
 
-              drawerItem(
-                icon: FontAwesomeIcons.fileCircleCheck,
-                title: "chat",
-                onTap: () {
-                  Get.to(ChatListPage());
-                },
-              ),
+              // drawerItem(
+              //   icon: FontAwesomeIcons.fileCircleCheck,
+              //   title: "chat",
+              //   onTap: () {
+              //     Get.to(ChatListPage());
+              //   },
+              // ),
               drawerItem(
                 icon: FontAwesomeIcons.fileLines,
                 title: "Privacy Policy",
