@@ -4,11 +4,16 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qlickcare/Controllers/call_controller.dart';
 import 'package:qlickcare/Utils/loading.dart';
+import 'package:qlickcare/View/chat/call/call_screen.dart';
+ // ✅ ADD THIS IMPORT
 import 'package:qlickcare/controllers/chat_controller.dart';
 import 'package:qlickcare/Model/chat_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'call/incoming_call_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final int chatId;
@@ -20,10 +25,11 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   late final ChatController _controller;
+  late final CallController callController;
   late final TextEditingController _messageController;
   late final ScrollController _scrollController;
   final ImagePicker _picker = ImagePicker();
-  
+
   bool _isInitialized = false;
   bool _isLoadingInitialData = true;
 
@@ -33,42 +39,58 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _controller = Get.find<ChatController>();
     _messageController = TextEditingController();
     _scrollController = ScrollController();
-    
-    // Initialize data loading
+
+    // Initialize CallController with WebSocketService
+    callController = Get.put(
+      CallController(_controller.wsService),
+      permanent: true,
+    );
+
     _initializeChat();
+    _setupCallListener(); // ✅ ADD CALL LISTENER
   }
 
-  /// Initializes chat with proper loading sequence
+  // ✅ NEW: Listen for incoming calls
+  void _setupCallListener() {
+    callController.callState.listen((state) {
+      if (state == CallState.ringing && mounted) {
+        final callerName = _controller.getCallerName();
+        
+        showIncomingCallDialog(
+          context: context,
+          callerName: callerName,
+          callType: callController.callType,
+          callController: callController,
+        );
+      }
+    });
+  }
+
   Future<void> _initializeChat() async {
     if (_isInitialized) return;
-    
+
     setState(() => _isLoadingInitialData = true);
-    
+
     try {
-      // STEP 1: Load messages first (most important data)
+      // Load messages first (this will extract user IDs)
       await _controller.fetchMessages(widget.chatId);
       
-      // STEP 2: Load chat details (can fail without breaking chat)
+      // Load chat details
       _controller.fetchChatDetail(widget.chatId).catchError((e) {
         print('⚠️ Failed to load chat details: $e');
-        // Don't throw, chat can still work
       });
-      
-      // STEP 3: Setup message listener BEFORE connecting WebSocket
+
       _setupMessageListener();
-      
-      // STEP 4: Connect WebSocket (now listener is ready)
       await _controller.connectWebSocket(widget.chatId);
-      
+
       _isInitialized = true;
-      
-      // STEP 5: Scroll to bottom after messages are rendered
+
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom(animate: false);
         });
       }
-      
+
       print('✅ Chat initialized successfully');
     } catch (e) {
       print('❌ Error initializing chat: $e');
@@ -97,7 +119,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _controller.wsService.messageStream.listen(
       (msg) {
         print('🎯 New message received: ${msg.id} - ${msg.content}');
-        // Auto-scroll when new message arrives
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_isNearBottom()) {
             _scrollToBottom();
@@ -112,15 +133,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   bool _isNearBottom() {
     if (!_scrollController.hasClients) return false;
-    
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    return (maxScroll - currentScroll) < 100; // Within 100 pixels of bottom
+    return (maxScroll - currentScroll) < 100;
   }
 
   void _scrollToBottom({bool animate = true}) {
     if (!_scrollController.hasClients) return;
-    
+
     if (animate) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -136,22 +156,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    // Clear input immediately for better UX
     _messageController.clear();
-    
-    // Hide keyboard
     FocusScope.of(context).unfocus();
-    
+
     try {
       await _controller.sendMessage(widget.chatId, text);
-      
-      // Scroll to bottom after sending
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
     } catch (e) {
       print('❌ Error sending message: $e');
-      // Optionally restore the message text on error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to send message')),
@@ -173,7 +187,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           image.path,
           image.name,
         );
-        
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -200,7 +214,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           result.files.single.path!,
           result.files.single.name,
         );
-        
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -254,6 +268,54 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
+  // ✅ UPDATED: Audio call with proper receiver ID
+  void _startAudioCall() {
+    final receiverId = _controller.getReceiverIdForCall();
+    
+    if (receiverId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please send a message first to enable calling'),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+      return;
+    }
+
+    print('📞 Starting audio call to user: $receiverId');
+    callController.startCall(receiverId: receiverId, type: 'audio');
+    Get.to(() => CallScreen());
+  }
+
+  // ✅ UPDATED: Video call with proper receiver ID
+  void _startVideoCall() {
+    final receiverId = _controller.getReceiverIdForCall();
+    
+    if (receiverId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please send a message first to enable calling'),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+      return;
+    }
+
+    print('📞 Starting video call to user: $receiverId');
+    callController.startCall(receiverId: receiverId, type: 'video');
+    Get.to(() => CallScreen());
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -272,10 +334,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       backgroundColor: AppColors.screenBackground,
       body: Column(
         children: [
-          // Header
           _buildHeader(size, isPortrait),
-
-          // Messages List
           Expanded(
             child: _isLoadingInitialData
                 ? const Center(child: Loading())
@@ -313,14 +372,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                     return NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification scrollInfo) {
-                        // Detect when user is scrolling up and approaching the top
                         if (scrollInfo is ScrollUpdateNotification) {
                           final position = _scrollController.position;
-                          
-                          // When user reaches top 300 pixels, start loading
                           if (position.pixels <= position.minScrollExtent + 300) {
-                            if (!_controller.isLoadingMore.value && 
-                                _controller.hasMore.value) {
+                            if (!_controller.isLoadingMore.value && _controller.hasMore.value) {
                               _controller.loadMoreMessages(widget.chatId);
                             }
                           }
@@ -336,7 +391,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: _controller.messages.length + 1,
                         itemBuilder: (context, index) {
-                          // Loading indicator at top
                           if (index == 0) {
                             return Obx(
                               () => _controller.isLoadingMore.value
@@ -346,9 +400,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                         child: SizedBox(
                                           width: 24,
                                           height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
+                                          child: CircularProgressIndicator(strokeWidth: 2),
                                         ),
                                       ),
                                     )
@@ -363,8 +415,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     );
                   }),
           ),
-
-          // Input Area
           _buildInput(size, isPortrait),
         ],
       ),
@@ -387,7 +437,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
             return Row(
               children: [
-                // Back Button
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(
@@ -397,14 +446,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ),
                 SizedBox(width: size.width * 0.02),
-
-                // Avatar
                 Container(
                   width: isPortrait ? size.width * 0.11 : size.height * 0.13,
                   height: isPortrait ? size.width * 0.11 : size.height * 0.13,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.buttonText.withOpacity(0.2),
+                    color: AppColors.buttonText.withValues(alpha: 0.2),
                     border: Border.all(color: AppColors.buttonText, width: 2),
                   ),
                   child: Center(
@@ -419,8 +466,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ),
                 SizedBox(width: size.width * 0.03),
-
-                // Name and Status
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,7 +494,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               Text(
                                 connected ? "Online" : "Offline",
                                 style: AppTextStyles.small.copyWith(
-                                  color: AppColors.buttonText.withOpacity(0.9),
+                                  color: AppColors.buttonText.withValues(alpha: 0.9),
                                   fontSize: isPortrait ? size.width * 0.032 : size.height * 0.038,
                                 ),
                               ),
@@ -460,10 +505,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ],
                   ),
                 ),
-
-                // Call Icons
+                // ✅ UPDATED: Call buttons
                 IconButton(
-                  onPressed: () {},
+                  onPressed: _startAudioCall,
                   icon: Icon(
                     Icons.phone,
                     color: AppColors.buttonText,
@@ -471,7 +515,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: _startVideoCall,
                   icon: Icon(
                     Icons.videocam,
                     color: AppColors.buttonText,
@@ -512,7 +556,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image message
               if (msg.messageType == 'image' && url != null)
                 GestureDetector(
                   onTap: () => _showFullImage(url),
@@ -544,12 +587,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                   ),
                 ),
-
-              // File message
-              if (msg.messageType == 'file' && url != null)
-                _buildFileMessage(msg, isMe, url),
-
-              // Text message
+              if (msg.messageType == 'file' && url != null) _buildFileMessage(msg, isMe, url),
               if (msg.messageType == 'text' && msg.content.isNotEmpty)
                 Text(
                   msg.content,
@@ -559,16 +597,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     height: 1.4,
                   ),
                 ),
-
               SizedBox(height: size.height * 0.004),
-              
-              // Time
               Text(
                 _formatTime(msg.sentAt),
                 style: TextStyle(
                   fontSize: 11,
-                  color: isMe 
-                      ? AppColors.buttonText.withOpacity(0.7) 
+                  color: isMe
+                      ? AppColors.buttonText.withValues(alpha: 0.7)
                       : AppColors.textSecondary,
                 ),
               ),
@@ -582,34 +617,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _buildFileMessage(Message msg, bool isMe, String url) {
     return GestureDetector(
       onTap: () async {
-      try {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
+        try {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Cannot open this file')),
+              );
+            }
+          }
+        } catch (e) {
+          print('❌ Error opening file: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cannot open this file')),
+              SnackBar(content: Text('Failed to open file: $e')),
             );
           }
         }
-      } catch (e) {
-        print('❌ Error opening file: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to open file: $e')),
-          );
-        }
-      }
-    },
+      },
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isMe 
-              ? AppColors.buttonText.withOpacity(0.2) 
+          color: isMe
+              ? AppColors.buttonText.withValues(alpha: 0.2)
               : AppColors.screenBackground,
           borderRadius: BorderRadius.circular(8),
         ),
@@ -669,7 +701,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -727,8 +759,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             SizedBox(width: size.width * 0.02),
-
-            // Send Button
             Obx(() {
               return _controller.isSendingMessage.value
                   ? Container(

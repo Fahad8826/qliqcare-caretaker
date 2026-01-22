@@ -5,7 +5,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/View/chat/chatdetailscreen.dart';
 import 'package:qlickcare/controllers/chat_controller.dart';
-import 'package:qlickcare/View/Drawer/chatdetails.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/View/Drawer/drawer.dart';

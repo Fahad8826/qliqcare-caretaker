@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 class TokenService {
   static final _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true, // 🔥 PREVENTS CRASH
+      encryptedSharedPreferences: true, //  PREVENTS CRASH
     ),
   );
 

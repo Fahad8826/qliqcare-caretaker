@@ -1,10 +1,11 @@
-// ChatController.dart - IMPROVED VERSION
+// ChatController.dart - WITH CALL SUPPORT
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qlickcare/Model/chat_model.dart' show ChatRoom, Message;
 import 'package:qlickcare/Services/tokenservice.dart';
-import '../../Model/chat_model.dart';
+
 import '../Services/tokenexpireservice.dart';
 import '../Services/websoket_chat_service.dart';
 
@@ -24,14 +25,15 @@ class ChatController extends GetxController {
   int? currentUserId;
   String currentUserType = "caretaker";
 
+  // ✅ NEW: Store extracted user IDs from messages
+  int? _extractedCustomerId;
+  int? _extractedCaretakerId;
+
   WebSocketService get wsService => _wsService;
 
   var currentPage = 1;
   var hasMore = true.obs;
   var isLoadingMore = false.obs;
-
-  // Keep track of current scroll position for smooth loading
-  double? _lastScrollPosition;
 
   @override
   void onInit() {
@@ -43,6 +45,10 @@ class ChatController extends GetxController {
     _wsService.messageStream.listen(
       (message) {
         print('📩 WS message received: ${message.id} - ${message.content}');
+        
+        // ✅ EXTRACT USER IDs FROM WEBSOCKET MESSAGES
+        _extractUserIdsFromMessage(message);
+        
         _addNewMessage(message);
         _updateChatRoomWithNewMessage(message);
       },
@@ -68,11 +74,98 @@ class ChatController extends GetxController {
           final Map<String, dynamic> payloadMap = json.decode(decoded);
 
           currentUserId = int.tryParse(payloadMap['user_id']?.toString() ?? '');
-          print('👤 Current user ID: $currentUserId');
+          print('👤 Current user ID: $currentUserId (Type: $currentUserType)');
         }
       }
     } catch (e) {
       print('⚠️ Could not get user info: $e');
+    }
+  }
+
+  // ✅ NEW: Extract customer and caretaker IDs from incoming messages
+  void _extractUserIdsFromMessage(Message message) {
+    // Your backend sends customer_id and caretaker_id in WebSocket messages
+    if (message.customerId != null) {
+      _extractedCustomerId = message.customerId;
+      print('📝 Extracted customer ID: $_extractedCustomerId');
+    }
+    
+    if (message.caretakerId != null) {
+      _extractedCaretakerId = message.caretakerId;
+      print('📝 Extracted caretaker ID: $_extractedCaretakerId');
+    }
+
+    // If IDs aren't in the message but we can infer from sender info
+    if (message.senderType == 'customer' && message.senderId != 0) {
+      _extractedCustomerId ??= message.senderId;
+      print('📝 Inferred customer ID from sender: $_extractedCustomerId');
+    } else if (message.senderType == 'caretaker' && message.senderId != 0) {
+      _extractedCaretakerId ??= message.senderId;
+      print('📝 Inferred caretaker ID from sender: $_extractedCaretakerId');
+    }
+  }
+
+  // ✅ NEW: Get the receiver's user ID for calls
+  int? getReceiverIdForCall() {
+    print('🔍 Getting receiver ID for call...');
+    print('   Current user ID: $currentUserId');
+    print('   Current user type: $currentUserType');
+    print('   Extracted customer ID: $_extractedCustomerId');
+    print('   Extracted caretaker ID: $_extractedCaretakerId');
+
+    // If we're the caretaker, call the customer
+    if (currentUserType == "caretaker") {
+      if (_extractedCustomerId != null) {
+        print('✅ Returning customer ID: $_extractedCustomerId');
+        return _extractedCustomerId;
+      }
+    }
+    // If we're the customer, call the caretaker
+    else if (currentUserType == "customer") {
+      if (_extractedCaretakerId != null) {
+        print('✅ Returning caretaker ID: $_extractedCaretakerId');
+        return _extractedCaretakerId;
+      }
+    }
+
+    // Fallback: Try to get from selected chat room
+    if (selectedChat.value != null) {
+      final chat = selectedChat.value!;
+      
+      if (chat.customerId != null && chat.customerId != currentUserId) {
+        print('✅ Returning customer ID from chat room: ${chat.customerId}');
+        return chat.customerId;
+      }
+      
+      if (chat.caretakerId != null && chat.caretakerId != currentUserId) {
+        print('✅ Returning caretaker ID from chat room: ${chat.caretakerId}');
+        return chat.caretakerId;
+      }
+    }
+
+    // Last resort: Infer from last message
+    if (messages.isNotEmpty) {
+      final lastMsg = messages.last;
+      if (lastMsg.senderId != currentUserId && lastMsg.senderId != 0) {
+        print('✅ Returning sender ID from last message: ${lastMsg.senderId}');
+        return lastMsg.senderId;
+      }
+    }
+
+    print('❌ Could not determine receiver ID');
+    return null;
+  }
+
+  // ✅ NEW: Get caller name for incoming calls
+  String getCallerName() {
+    final chat = selectedChat.value;
+    if (chat == null) return 'Unknown';
+
+    // If we're caretaker, caller is customer
+    if (currentUserType == "caretaker") {
+      return chat.customerName.isNotEmpty ? chat.customerName : 'Customer';
+    } else {
+      return chat.caretakerName.isNotEmpty ? chat.caretakerName : 'Caretaker';
     }
   }
 
@@ -123,6 +216,8 @@ class ChatController extends GetxController {
           file: message.file,
           isRead: message.isRead,
           readAt: message.readAt,
+          customerId: message.customerId,
+          caretakerId: message.caretakerId,
         );
         print('🔧 Fixed sender_type: ${finalMessage.senderType}');
       }
@@ -152,6 +247,8 @@ class ChatController extends GetxController {
         booking: room.booking,
         customerName: room.customerName,
         caretakerName: room.caretakerName,
+        customerId: room.customerId ?? message.customerId,
+        caretakerId: room.caretakerId ?? message.caretakerId,
         lastMessage: message,
         unreadCount: message.senderType != "caretaker"
             ? room.unreadCount + 1
@@ -204,6 +301,15 @@ class ChatController extends GetxController {
 
       if (response.statusCode == 200) {
         selectedChat.value = ChatRoom.fromJson(jsonDecode(response.body));
+        
+        // ✅ Try to extract user IDs from chat room
+        if (selectedChat.value?.customerId != null) {
+          _extractedCustomerId = selectedChat.value!.customerId;
+        }
+        if (selectedChat.value?.caretakerId != null) {
+          _extractedCaretakerId = selectedChat.value!.caretakerId;
+        }
+        
         print('📌 Loaded room $id');
       }
     } catch (e) {
@@ -212,7 +318,6 @@ class ChatController extends GetxController {
   }
 
   Future<void> fetchMessages(int roomId, {bool loadMore = false}) async {
-    // Prevent multiple simultaneous loads
     if (loadMore && (!hasMore.value || isLoadingMore.value)) {
       print('⚠️ Already loading or no more messages');
       return;
@@ -248,28 +353,29 @@ class ChatController extends GetxController {
           return;
         }
 
-        // API returns newest first, reverse to get oldest first
         final newMsgs = results
             .map<Message>((e) => Message.fromJson(e))
             .toList()
             .reversed
             .toList();
 
+        // ✅ Extract user IDs from historical messages
+        for (var msg in newMsgs) {
+          _extractUserIdsFromMessage(msg);
+        }
+
         if (loadMore) {
-          // Insert older messages at the beginning
           messages.insertAll(0, newMsgs);
           print(
             '📄 Loaded ${newMsgs.length} more messages (${messages.length} total)',
           );
         } else {
-          // First load - just assign
           messages.value = newMsgs;
           print('📄 Loaded ${newMsgs.length} initial messages');
         }
 
         currentPage++;
 
-        // Check if there are more pages
         final next = decoded['next'];
         if (next == null) {
           hasMore.value = false;
@@ -312,7 +418,6 @@ class ChatController extends GetxController {
       if (_wsService.isConnected) {
         print('✉️ WS send: $content');
 
-        // Create optimistic message
         final optimisticMessage = Message(
           id: DateTime.now().millisecondsSinceEpoch,
           content: content,
@@ -322,15 +427,15 @@ class ChatController extends GetxController {
           messageType: 'text',
           sentAt: DateTime.now().toIso8601String(),
           isRead: false,
+          customerId: _extractedCustomerId,
+          caretakerId: _extractedCaretakerId,
         );
 
-        // Add to UI immediately
         _addNewMessage(optimisticMessage);
         _updateChatRoomWithNewMessage(optimisticMessage);
         print('✅ Optimistic message added to UI');
 
-        // Send via WebSocket
-        await _wsService.sendMessage(content);
+        _wsService.sendMessage(content);
       } else {
         print('❌ WebSocket not connected');
         Get.snackbar(
@@ -352,58 +457,56 @@ class ChatController extends GetxController {
   }
 
   Future<void> sendFileMessage(
-  int roomId,
-  String filePath,
-  String fileName,
-) async {
-  try {
-    isSendingMessage.value = true;
+    int roomId,
+    String filePath,
+    String fileName,
+  ) async {
+    try {
+      isSendingMessage.value = true;
 
-    final messageType = _getFileType(fileName);
-    
-    // Create optimistic message with local file
-    final optimisticMessage = Message(
-      id: DateTime.now().millisecondsSinceEpoch,
-      content: fileName,
-      senderId: currentUserId ?? 0,
-      senderName: 'You',
-      senderType: currentUserType,
-      messageType: messageType,
-      sentAt: DateTime.now().toIso8601String(),
-      isRead: false,
-      file: filePath, // Store local path temporarily
-    );
+      final messageType = _getFileType(fileName);
 
-    // Add to UI immediately
-    _addNewMessage(optimisticMessage);
-    _updateChatRoomWithNewMessage(optimisticMessage);
-    print('✅ Optimistic file message added to UI');
-
-    if (_wsService.isConnected) {
-      await _wsService.sendFileMessage(
-        filePath: filePath,
-        fileName: fileName,
-        messageType: messageType,
+      final optimisticMessage = Message(
+        id: DateTime.now().millisecondsSinceEpoch,
         content: fileName,
+        senderId: currentUserId ?? 0,
+        senderName: 'You',
+        senderType: currentUserType,
+        messageType: messageType,
+        sentAt: DateTime.now().toIso8601String(),
+        isRead: false,
+        file: filePath,
+        customerId: _extractedCustomerId,
+        caretakerId: _extractedCaretakerId,
       );
-    } else {
-      throw Exception('WebSocket not connected');
+
+      _addNewMessage(optimisticMessage);
+      _updateChatRoomWithNewMessage(optimisticMessage);
+      print('✅ Optimistic file message added to UI');
+
+      if (_wsService.isConnected) {
+        await _wsService.sendFileMessage(
+          filePath: filePath,
+          fileName: fileName,
+          messageType: messageType,
+          content: fileName,
+        );
+      } else {
+        throw Exception('WebSocket not connected');
+      }
+    } catch (e) {
+      print('🔥 sendFileMessage error: $e');
+      messages.removeWhere((m) => m.id == DateTime.now().millisecondsSinceEpoch);
+
+      Get.snackbar(
+        'Error',
+        'Failed to send file: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isSendingMessage.value = false;
     }
-  } catch (e) {
-    print('🔥 sendFileMessage error: $e');
-    // Remove optimistic message on error
-    messages.removeWhere((m) => 
-      m.id == DateTime.now().millisecondsSinceEpoch);
-    
-    Get.snackbar(
-      'Error',
-      'Failed to send file: ${e.toString()}',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  } finally {
-    isSendingMessage.value = false;
   }
-}
 
   String _getFileType(String name) {
     final ext = name.toLowerCase().split('.').last;

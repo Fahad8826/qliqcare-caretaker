@@ -5,7 +5,6 @@ import 'package:qlickcare/Controllers/whtasappcontroller.dart';
 import 'package:qlickcare/Controllers/profilecontroller.dart';
 import 'package:qlickcare/Services/logoutdailoge.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
-import 'package:qlickcare/View/Drawer/listchat.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends StatelessWidget {

@@ -1,45 +1,66 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Network -->
+    <!-- ===================== -->
+    <!-- 🌐 Network -->
+    <!-- ===================== -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Notifications -->
+    <!-- ===================== -->
+    <!-- 🔔 Notifications -->
+    <!-- ===================== -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <!-- Media -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- ===================== -->
+    <!-- 📷🎤 WebRTC (Camera & Mic) -->
+    <!-- ===================== -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 
-    <!-- Location -->
+    <!-- ===================== -->
+    <!-- 📍 Location -->
+    <!-- ===================== -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
 
-    <!-- 🔥 REQUIRED FOR FOREGROUND SERVICE -->
+    <!-- ===================== -->
+    <!-- 🗂 Media -->
+    <!-- ===================== -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
+    <!-- ===================== -->
+    <!-- 🚀 Foreground Services -->
+    <!-- ===================== -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
 
     <application
         android:label="Qlick Care - Caretaker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- Firebase notification channel -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="high_importance_channel"/>
 
+        <!-- Flutter theme -->
         <meta-data
             android:name="io.flutter.embedding.android.NormalTheme"
             android:resource="@style/NormalTheme"/>
 
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -47,16 +68,18 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ FOREGROUND LOCATION SERVICE -->
+        <!-- 📍 Foreground Location Service -->
         <service
             android:name=".LocationForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|camera|microphone"/>
 
+        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
-            android:value="2" />
+            android:value="2"/>
+
     </application>
 
 </manifest>

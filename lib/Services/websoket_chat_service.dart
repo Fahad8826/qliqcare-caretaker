@@ -1,165 +1,241 @@
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:qlickcare/Services/tokenservice.dart';
-import 'package:qlickcare/Model/chat_model.dart';
 import 'package:mime/mime.dart';
+import 'package:qlickcare/Model/chat_model.dart';
+import 'package:qlickcare/Services/tokenservice.dart';
 
 class WebSocketService {
   WebSocket? _webSocket;
+
   final _messageController = StreamController<Message>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
-  
+  final _callController = StreamController<Map<String, dynamic>>.broadcast();
+
   Stream<Message> get messageStream => _messageController.stream;
   Stream<bool> get connectionStream => _connectionController.stream;
-  
+  Stream<Map<String, dynamic>> get callStream => _callController.stream;
+
   bool _isConnected = false;
   int? _currentRoomId;
 
   bool get isConnected => _isConnected;
 
-  /// Connect to WebSocket for a specific chat room
+  // =====================================================
+  // CONNECT
+  // =====================================================
   Future<void> connect(int roomId) async {
+    await disconnect();
+
+    _currentRoomId = roomId;
+
+    final token = await TokenService.getAccessToken();
+    if (token == null || token.isEmpty) {
+      print('❌ WebSocket: No access token available');
+      _connectionController.add(false);
+      return;
+    }
+
+    String baseUrl = dotenv.env['BASE_URL']!
+        .replaceAll(RegExp(r'https?://|wss?://'), '');
+
+    final wsUrl = 'wss://$baseUrl/ws/chat/$roomId/?token=$token';
+    print('🔌 Connecting to WebSocket: $wsUrl');
+
     try {
-      // Close existing connection if any
-      await disconnect();
-
-      _currentRoomId = roomId;
-      
-      // Get access token
-      String? token = await TokenService.getAccessToken();
-      if (token == null || token.isEmpty) {
-        print('❌ WebSocket: No access token available');
-        _connectionController.add(false);
-        return;
-      }
-
-      // Build WebSocket URL
-      String baseUrl = dotenv.env['BASE_URL']!;
-      
-      // Remove protocol and get clean domain
-      baseUrl = baseUrl
-          .replaceAll('https://', '')
-          .replaceAll('http://', '')
-          .replaceAll('wss://', '')
-          .replaceAll('ws://', '');
-      
-      // Use wss:// for secure WebSocket
-      final wsUrl = 'wss://$baseUrl/ws/chat/$roomId/?token=$token';
-      
-      print('🔌 Connecting to WebSocket: $wsUrl');
-
-      // Create WebSocket connection using dart:io
-      _webSocket = await WebSocket.connect(
-        wsUrl,
-        headers: {
-          'Connection': 'Upgrade',
-          'Upgrade': 'websocket',
-        },
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException('WebSocket connection timeout');
-        },
-      );
-
+      _webSocket = await WebSocket.connect(wsUrl);
       _isConnected = true;
       _connectionController.add(true);
       print('✅ WebSocket connected to room $roomId');
 
-      // Listen for messages
       _webSocket!.listen(
-        (data) {
-          print('📨 WebSocket received: $data');
-          _handleMessage(data);
-        },
+        _handleMessage,
+        onDone: _handleDisconnect,
         onError: (error) {
           print('❌ WebSocket error: $error');
-          _isConnected = false;
-          _connectionController.add(false);
-        },
-        onDone: () {
-          print('🔌 WebSocket connection closed');
-          _isConnected = false;
-          _connectionController.add(false);
+          _handleDisconnect();
         },
         cancelOnError: false,
       );
-
     } catch (e) {
-      print('❌ WebSocket connection error: $e');
+      print('❌ Failed to connect WebSocket: $e');
       _isConnected = false;
       _connectionController.add(false);
-      rethrow;
     }
   }
 
-  /// Handle incoming WebSocket messages
+  void _handleDisconnect() {
+    print('🔌 WebSocket disconnected');
+    _isConnected = false;
+    _connectionController.add(false);
+  }
+
+  // =====================================================
+  // RECEIVE
+  // =====================================================
   void _handleMessage(dynamic data) {
     try {
       final decoded = jsonDecode(data);
-      print('📩 Decoded message: $decoded');
-      print('📩 Message type: ${decoded['type']}');
-      print('📩 Message keys: ${decoded.keys.toList()}');
+      final type = decoded['type'];
+      print('📩 Received WS message: $type');
 
-      // Handle different response formats from server
-      if (decoded['type'] == 'chat_message') {
-        // Check if message is nested
-        if (decoded['message'] != null) {
-          print('📩 Found nested message object');
-          final message = Message.fromJson(decoded['message']);
-          _messageController.add(message);
-          print('✅ Message added to stream: ${message.id}');
-        } 
-        // Check if content is at top level
-        else if (decoded['content'] != null) {
-          print('📩 Found top-level content');
-          final message = Message.fromJson(decoded);
-          _messageController.add(message);
-          print('✅ Message added to stream: ${message.id}');
-        }
-      } 
-      // Sometimes server sends message directly without type wrapper
-      else if (decoded['content'] != null || decoded['message_type'] != null) {
-        print('📩 Direct message format');
-        final message = Message.fromJson(decoded);
+      // CHAT MESSAGE
+      if (type == 'chat_message') {
+        final message = decoded['message'] != null
+            ? Message.fromJson(decoded['message'])
+            : Message.fromJson(decoded);
+
         _messageController.add(message);
-        print('✅ Message added to stream: ${message.id}');
       }
-      else {
-        print('⚠️ Unknown message format: $decoded');
+      // FILE MESSAGE
+      else if (decoded['content'] != null || decoded['message_type'] != null) {
+        _messageController.add(Message.fromJson(decoded));
       }
-    } catch (e, stackTrace) {
-      print('❌ Error parsing WebSocket message: $e');
-      print('❌ Stack trace: $stackTrace');
-    }
-  }
-
-  /// Send a text message with correct payload format
-  Future<void> sendMessage(String content) async {
-    if (!_isConnected || _webSocket == null) {
-      print('❌ Cannot send message: WebSocket not connected');
-      throw Exception('WebSocket not connected');
-    }
-
-    try {
-      // Use the correct payload format: {"type": "chat_message", "content": "message"}
-      final payload = jsonEncode({
-        'type': 'chat_message',
-        'content': content,
-      });
-
-      print('📤 Sending message: $payload');
-      _webSocket!.add(payload);
-      print('✅ Message sent successfully');
+      // CALL SIGNALING
+      else if (_isCallType(type)) {
+        _callController.add(decoded);
+      }
     } catch (e) {
-      print('❌ Error sending message: $e');
-      throw e;
+      print('❌ WebSocket parse error: $e');
+      print('Raw data: $data');
     }
   }
 
-  /// Disconnect WebSocket
+  bool _isCallType(String? type) {
+    return [
+      'call_offer',
+      'call_answer',
+      'ice_candidate',
+      'call_end',
+      'call_ended',
+      'call_decline',
+      'call_mute',
+      'peer_muted',
+      'call_video_toggle',
+      'peer_video_toggle',
+    ].contains(type);
+  }
+
+  // =====================================================
+  // CHAT SEND
+  // =====================================================
+  void sendMessage(String content) {
+    send({
+      'type': 'chat_message',
+      'content': content,
+    });
+  }
+
+  // =====================================================
+  // FILE SEND
+  // =====================================================
+  Future<void> sendFileMessage({
+    required String filePath,
+    required String fileName,
+    required String messageType,
+    String? content,
+  }) async {
+    final file = File(filePath);
+    final bytes = await file.readAsBytes();
+
+    send({
+      'type': 'file_upload',
+      'message_type': messageType,
+      'file_name': fileName,
+      'file_type': lookupMimeType(filePath),
+      'file_data': base64Encode(bytes),
+      'content': content ?? fileName,
+    });
+  }
+
+  // =====================================================
+  // CALL SEND METHODS (CARETAKER)
+  // =====================================================
+
+  /// Accept call
+  void sendCallAnswer({
+    required int callLogId,
+    required Map<String, dynamic> answer,
+  }) {
+    send({
+      'type': 'call_answer',
+      'call_log_id': callLogId,
+      'answer': answer,
+    });
+  }
+
+  /// Decline call
+  void declineCall(int callLogId) {
+    send({
+      'type': 'call_decline',
+      'call_log_id': callLogId,
+    });
+  }
+
+  /// Send ICE candidate
+  void sendIceCandidate({
+    required int callLogId,
+    required Map<String, dynamic> candidate,
+  }) {
+    send({
+      'type': 'ice_candidate',
+      'call_log_id': callLogId,
+      'candidate': candidate,
+    });
+  }
+
+  /// End call
+  void endCall(int callLogId) {
+    send({
+      'type': 'call_end',
+      'call_log_id': callLogId,
+    });
+  }
+
+  /// Mute / Unmute
+  void muteAudio({
+    required int callLogId,
+    required bool muted,
+  }) {
+    send({
+      'type': 'call_mute',
+      'call_log_id': callLogId,
+      'audio_muted': muted,
+    });
+  }
+
+  /// Video ON / OFF
+  void toggleVideo({
+    required int callLogId,
+    required bool enabled,
+  }) {
+    send({
+      'type': 'call_video_toggle',
+      'call_log_id': callLogId,
+      'video_enabled': enabled,
+    });
+  }
+
+  // =====================================================
+  // SEND HELPER - PUBLIC for CallController
+  // =====================================================
+  void send(Map<String, dynamic> payload) {
+    if (!_isConnected || _webSocket == null) {
+      print('⚠️ Cannot send: WebSocket not connected');
+      return;
+    }
+    
+    final message = jsonEncode(payload);
+    print('📤 Sending: ${payload['type']}');
+    _webSocket!.add(message);
+  }
+
+  // =====================================================
+  // DISCONNECT
+  // =====================================================
   Future<void> disconnect() async {
     if (_webSocket != null) {
       print('🔌 Disconnecting WebSocket from room $_currentRoomId');
@@ -175,58 +251,14 @@ class WebSocketService {
     _connectionController.add(false);
   }
 
-   Future<void> sendFileMessage({
-    required String filePath,
-    required String fileName,
-    required String messageType, // 'image' or 'file'
-    String? content,
-  }) async {
-    if (!_isConnected || _webSocket == null) {
-      print('❌ Cannot send file: WebSocket not connected');
-      throw Exception('WebSocket not connected');
-    }
-
-    try {
-      // Read file as bytes
-      final file = File(filePath);
-      final bytes = await file.readAsBytes();
-      
-      // Convert to base64
-      final base64Data = base64Encode(bytes);
-      
-      // Get MIME type
-      final mimeType = lookupMimeType(filePath) ?? 'application/octet-stream';
-      
-      print('📤 Preparing file upload:');
-      print('   File: $fileName');
-      print('   Type: $mimeType');
-      print('   Size: ${bytes.length} bytes');
-      print('   Base64 length: ${base64Data.length}');
-      
-      // Create payload in the exact format your WebSocket expects
-      final payload = jsonEncode({
-        'type': 'file_upload',
-        'message_type': messageType, // 'image' or 'file'
-        'file_name': fileName,
-        'file_type': mimeType,
-        'file_data': base64Data,
-        'content': content ?? fileName, // Optional caption/description
-      });
-
-      print('📤 Sending file via WebSocket...');
-      _webSocket!.add(payload);
-      print('✅ File sent successfully');
-      
-    } catch (e) {
-      print('❌ Error sending file: $e');
-      throw e;
-    }
-  }
-
-  /// Dispose streams
+  // =====================================================
+  // DISPOSE
+  // =====================================================
   void dispose() {
+    print('🗑️ Disposing WebSocketService');
     disconnect();
     _messageController.close();
+    _callController.close();
     _connectionController.close();
   }
 }
