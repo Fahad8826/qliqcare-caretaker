@@ -29,6 +29,11 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
+    // packaging {
+    // resources {
+    //     excludes += setOf("META-INF/*")
+    // }
+    // }
 
     // Load key.properties for signing
     val keyProperties = Properties().apply {

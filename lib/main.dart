@@ -7,11 +7,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:qlickcare/Routes/app_routes.dart';
 import 'package:qlickcare/Services/locationservice.dart';
-import 'package:qlickcare/Services/tokenservice.dart';
+import 'package:qlickcare/authentication/service/tokenservice.dart';
 
 
 import 'Utils/appcolors.dart';
-import 'Services/notification_services.dart';
+import 'notification/service/notification_services.dart';
 
 /// ----------------------------------------------------------
 /// 🔥 Background Handler (TOP LEVEL – REQUIRED)

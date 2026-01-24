@@ -8,7 +8,7 @@ import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
 
-import 'tokenservice.dart';
+import '../authentication/service/tokenservice.dart';
 
 class LocationService {
   static const MethodChannel _channel = MethodChannel('com.qliq/location');

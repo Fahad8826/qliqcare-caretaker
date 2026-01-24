@@ -1,16 +1,19 @@
 import 'package:get/get.dart';
-import 'package:qlickcare/View/Auth/login.dart';
-import 'package:qlickcare/View/Drawer/leave&attendance/myleave.dart';
-import 'package:qlickcare/View/Home/navbar.dart';
+import 'package:qlickcare/all_permisson.dart';
+import 'package:qlickcare/authentication/view/login.dart';
 
-import 'package:qlickcare/View/Splash/splashscreen.dart';
-import 'package:qlickcare/View/Onboarding/onboardingscreens.dart';
-import 'package:qlickcare/View/Home/homepage.dart';
-import 'package:qlickcare/View/Drawer/Booking/bookingview.dart';
-import 'package:qlickcare/View/chat/chatscreen.dart';
-import 'package:qlickcare/View/Drawer/complaints/complaints.dart';
-import 'package:qlickcare/View/Drawer/leave&attendance/attendace.dart';
-import 'package:qlickcare/View/Drawer/payment/paysliplist.dart';
+import 'package:qlickcare/attendance/view/myleave.dart';
+import 'package:qlickcare/Home/navbar.dart';
+
+import 'package:qlickcare/Splash/splashscreen.dart';
+import 'package:qlickcare/onboarding/view/onboardingscreens.dart';
+import 'package:qlickcare/Home/homepage.dart';
+
+import 'package:qlickcare/chat/view/chatscreen.dart';
+import 'package:qlickcare/complaint/views/complaints.dart';
+import 'package:qlickcare/attendance/view/attendace.dart';
+import 'package:qlickcare/payslip/view/paysliplist.dart';
+import 'package:qlickcare/bookings/view/bookingview.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -25,7 +28,7 @@ class AppRoutes {
   static const String payslipList = '/payslipList';
   static const String leaveAttendance = '/leaveAttendance';
   static const String settings = '/leave';
-  
+  static const String allPermission = '/all-permission';
 
   static final pages = [
     GetPage(name: splash, page: () => SplashScreen()),
@@ -39,5 +42,6 @@ class AppRoutes {
     GetPage(name: payslipList, page: () => PayslipListView()),
     GetPage(name: leaveAttendance, page: () => Leaveandattendace()),
     GetPage(name: settings, page: () => LeaveManagementScreen()), // Placeholder
+    GetPage(name: allPermission, page: () => AllPermissionPage()),  
   ];
 }
