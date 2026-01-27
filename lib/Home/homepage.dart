@@ -24,12 +24,16 @@ class _HomePageState extends State<HomePage> {
   String locationName = "Loading...";
   Map<int, bool> expandedStates = {};
 
-  final P_Controller profileController = Get.put(P_Controller());
-  final ChatController controller = Get.put(ChatController());
-  final BookingController ongoingBookingController = Get.put(
-    BookingController(),
-    tag: 'homepage',
-  );
+  // final P_Controller profileController = Get.put(P_Controller());
+  // final ChatController controller = Get.put(ChatController());
+  // final BookingController ongoingBookingController = Get.put(
+  //   BookingController(),
+  //   tag: 'homepage',
+  // );
+
+final P_Controller profileController = Get.find();
+final ChatController controller = Get.find();
+final BookingController ongoingBookingController = Get.find();
 
   @override
   void initState() {
@@ -37,6 +41,19 @@ class _HomePageState extends State<HomePage> {
     _fetchLocationName();
     ongoingBookingController.fetchOngoingBookings();
   }
+
+  String getGreeting() {
+  final hour = DateTime.now().hour;
+
+  if (hour < 12) {
+    return "Good Morning";
+  } else if (hour < 17) {
+    return "Good Afternoon";
+  } else {
+    return "Good Evening";
+  }
+}
+
 
   Future<void> _fetchLocationName() async {
     try {
@@ -106,12 +123,26 @@ class _HomePageState extends State<HomePage> {
       drawer: const AppDrawer(),
       appBar: CommonAppBar(
         title: "Home",
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: Icon(
+                FontAwesomeIcons.bars,
+                color: AppColors.background,
+                size: 22,
+              ),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
+        ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               FontAwesomeIcons.bell,
               color: AppColors.background,
-              size: 20,
+              size: 22,
             ),
             onPressed: () {
               Navigator.push(
@@ -121,14 +152,6 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ],
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: AppColors.background, size: 28),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-        ),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -161,7 +184,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Good Morning,",
+                            getGreeting() + ",",
                             style: AppTextStyles.body.copyWith(
                               color: AppColors.textSecondary,
                               fontSize: 13,

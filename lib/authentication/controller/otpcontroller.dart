@@ -89,13 +89,13 @@ class OtpController extends GetxController {
         // 🔥 Now start background services safely
         await _initializeBackgroundServices();
 
-        Get.snackbar(
-          "Success",
-          "Login successful!",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+        // Get.snackbar(
+        //   "Success",
+        //   "Login successful!",
+        //   backgroundColor: Colors.green,
+        //   colorText: Colors.white,
+        //   duration: const Duration(seconds: 2),
+        // );
 
         Get.offAllNamed('/MainHome');
       }

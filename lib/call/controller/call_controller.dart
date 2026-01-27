@@ -1,356 +1,10 @@
-// import 'dart:async';
-// import 'package:get/get.dart';
-// import 'package:flutter_webrtc/flutter_webrtc.dart';
-// import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
-// import 'package:permission_handler/permission_handler.dart';
-// import 'package:qlickcare/chat/service/websoket_chat_service.dart';
 
-// enum CallState {
-//   idle,
-//   ringing,
-//   connecting,
-//   ongoing,
-//   ended,
-// }
-
-// class CallController extends GetxController {
-//   final WebSocketService ws;
-
-//   CallController(this.ws);
-
-//   // ======================
-//   // STATE
-//   // ======================
-//   final callState = CallState.idle.obs;
-//   final isMuted = false.obs;
-//   final isVideoEnabled = true.obs;
-//   final isSpeakerOn = false.obs;
-//   final callDuration = 0.obs;
-
-//   int? callLogId;
-//   int? receiverId;
-//   String callType = 'audio'; // audio | video
-
-//   Timer? _callTimer;
-//   Timer? _ringTimer;
-
-//   // ======================
-//   // WEBRTC
-//   // ======================
-//   RTCPeerConnection? _peer;
-//   MediaStream? localStream;
-//   MediaStream? remoteStream;
-
-//   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
-//   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
-
-//   // ======================
-//   // INIT
-//   // ======================
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     _initRenderers();
-//     ws.callStream.listen(_handleSignal);
-//   }
-
-//   Future<void> _initRenderers() async {
-//     await localRenderer.initialize();
-//     await remoteRenderer.initialize();
-//   }
-
-//   // ======================
-//   // PERMISSIONS
-//   // ======================
-//   Future<void> _ensurePermissions() async {
-//     final statuses = await [
-//       Permission.camera,
-//       Permission.microphone,
-//     ].request();
-
-//     if (statuses[Permission.camera] != PermissionStatus.granted ||
-//         statuses[Permission.microphone] != PermissionStatus.granted) {
-//       throw Exception('Camera or Microphone permission denied');
-//     }
-//   }
-
-//   // ======================
-//   // SIGNAL HANDLER
-//   // ======================
-//   Future<void> _handleSignal(Map<String, dynamic> data) async {
-//     final type = data['type'];
-//     print('📞 Call signal received: $type');
-
-//     switch (type) {
-//       case 'call_offer':
-//         callLogId = data['call_log_id'];
-//         receiverId = data['caller_id'];
-//         callType = data['call_type'];
-
-//         callState.value = CallState.ringing;
-//         _startRingTimeout();
-
-//         await _createPeer(setRemoteOffer: data['offer']);
-//         break;
-
-//       case 'call_answer':
-//         if (_peer == null) return;
-
-//         await _peer!.setRemoteDescription(
-//           RTCSessionDescription(
-//             data['answer']['sdp'],
-//             data['answer']['type'],
-//           ),
-//         );
-
-//         callState.value = CallState.ongoing;
-//         _startCallTimer();
-//         break;
-
-//       case 'ice_candidate':
-//         if (_peer == null) return;
-
-//         await _peer!.addCandidate(
-//           RTCIceCandidate(
-//             data['candidate']['candidate'],
-//             data['candidate']['sdpMid'],
-//             data['candidate']['sdpMLineIndex'],
-//           ),
-//         );
-//         break;
-
-//       case 'call_end':
-//       case 'call_ended':
-//       case 'call_decline':
-//         endCall(remote: true);
-//         break;
-//     }
-//   }
-
-//   // ======================
-//   // OUTGOING CALL
-//   // ======================
-//   Future<void> startCall({
-//     required int receiverId,
-//     required String type,
-//   }) async {
-//     try {
-//       print('📞 Starting $type call to user $receiverId');
-
-//       await _ensurePermissions();
-
-//       this.receiverId = receiverId;
-//       callType = type;
-//       callState.value = CallState.connecting;
-
-//       await _createPeer();
-
-//       final offer = await _peer!.createOffer();
-//       await _peer!.setLocalDescription(offer);
-
-//       ws.send({
-//         'type': 'call_offer',
-//         'receiver_id': receiverId,
-//         'call_type': type,
-//         'offer': offer.toMap(),
-//       });
-
-//       _startRingTimeout();
-//     } catch (e) {
-//       print('❌ Start call error: $e');
-//       _cleanup();
-//       callState.value = CallState.idle;
-//     }
-//   }
-
-//   // ======================
-//   // INCOMING CALL ACCEPT
-//   // ======================
-//   Future<void> acceptCall() async {
-//     try {
-//       await _ensurePermissions();
-
-//       if (_peer == null) {
-//         await _createPeer();
-//       }
-
-//       final answer = await _peer!.createAnswer();
-//       await _peer!.setLocalDescription(answer);
-
-//       ws.sendCallAnswer(
-//         callLogId: callLogId!,
-//         answer: answer.toMap(),
-//       );
-
-//       callState.value = CallState.ongoing;
-//       _startCallTimer();
-//     } catch (e) {
-//       print('❌ Accept call error: $e');
-//       declineCall();
-//     }
-//   }
-
-//   void declineCall() {
-//     if (callLogId != null) {
-//       ws.declineCall(callLogId!);
-//     }
-//     endCall();
-//   }
-
-//   // ======================
-//   // END CALL
-//   // ======================
-//   void endCall({bool remote = false}) {
-//     if (!remote && callLogId != null) {
-//       ws.endCall(callLogId!);
-//     }
-//     _cleanup();
-//     callState.value = CallState.ended;
-//   }
-
-//   // ======================
-//   // CONTROLS
-//   // ======================
-//   void toggleMute() {
-//     isMuted.toggle();
-//     localStream?.getAudioTracks().forEach(
-//       (t) => t.enabled = !isMuted.value,
-//     );
-//   }
-
-//   void toggleVideo() {
-//     isVideoEnabled.toggle();
-//     localStream?.getVideoTracks().forEach(
-//       (t) => t.enabled = isVideoEnabled.value,
-//     );
-//   }
-
-//   void toggleSpeaker() {
-//     isSpeakerOn.toggle();
-//     webrtc.Helper.setSpeakerphoneOn(isSpeakerOn.value);
-//   }
-
-//   void switchCamera() {
-//     final tracks = localStream?.getVideoTracks();
-//     if (tracks != null && tracks.isNotEmpty) {
-//       webrtc.Helper.switchCamera(tracks.first);
-//     }
-//   }
-
-//   // ======================
-//   // WEBRTC CORE
-//   // ======================
-//   Future<void> _createPeer({Map<String, dynamic>? setRemoteOffer}) async {
-//     if (_peer != null && localStream != null) return;
-
-//     await _ensurePermissions();
-
-//     localStream ??= await webrtc.navigator.mediaDevices.getUserMedia({
-//       'audio': true,
-//       'video': callType == 'video',
-//     });
-
-//     localRenderer.srcObject = localStream;
-
-//     _peer ??= await createPeerConnection({
-//       'iceServers': [
-//         {'urls': 'stun:stun.l.google.com:19302'},
-//         {'urls': 'stun:stun1.l.google.com:19302'},
-//       ],
-//     });
-
-//     for (var track in localStream!.getTracks()) {
-//       await _peer!.addTrack(track, localStream!);
-//     }
-
-//     _peer!.onTrack = (event) {
-//       if (event.streams.isNotEmpty) {
-//         remoteStream = event.streams.first;
-//         remoteRenderer.srcObject = remoteStream;
-//       }
-//     };
-
-//     _peer!.onIceCandidate = (candidate) {
-//       if (candidate.candidate != null && callLogId != null) {
-//         ws.sendIceCandidate(
-//           callLogId: callLogId!,
-//           candidate: candidate.toMap(),
-//         );
-//       }
-//     };
-
-//     if (setRemoteOffer != null) {
-//       await _peer!.setRemoteDescription(
-//         RTCSessionDescription(
-//           setRemoteOffer['sdp'],
-//           setRemoteOffer['type'],
-//         ),
-//       );
-//     }
-//   }
-
-//   // ======================
-//   // TIMERS
-//   // ======================
-//   void _startCallTimer() {
-//     _callTimer?.cancel();
-//     callDuration.value = 0;
-//     _callTimer = Timer.periodic(
-//       const Duration(seconds: 1),
-//       (_) => callDuration.value++,
-//     );
-//   }
-
-//   void _startRingTimeout() {
-//     _ringTimer?.cancel();
-//     _ringTimer = Timer(const Duration(seconds: 30), () {
-//       if (callState.value == CallState.ringing ||
-//           callState.value == CallState.connecting) {
-//         declineCall();
-//       }
-//     });
-//   }
-
-//   // ======================
-//   // CLEANUP
-//   // ======================
-//   void _cleanup() {
-//     _callTimer?.cancel();
-//     _ringTimer?.cancel();
-
-//     _peer?.close();
-//     _peer = null;
-
-//     localStream?.getTracks().forEach((t) => t.stop());
-//     localStream?.dispose();
-//     localStream = null;
-
-//     remoteStream?.dispose();
-//     remoteStream = null;
-
-//     localRenderer.srcObject = null;
-//     remoteRenderer.srcObject = null;
-
-//     callLogId = null;
-//     receiverId = null;
-//     isMuted.value = false;
-//     isVideoEnabled.value = true;
-//     callDuration.value = 0;
-//   }
-
-//   @override
-//   void onClose() {
-//     _cleanup();
-//     localRenderer.dispose();
-//     remoteRenderer.dispose();
-//     super.onClose();
-//   }
-// }
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:qlickcare/call/view/incoming_call_screen.dart';
 import 'package:qlickcare/chat/service/websoket_chat_service.dart';
 
 void logCall(String msg) => print('📞 CALL => $msg');
@@ -382,6 +36,10 @@ class CallController extends GetxController {
 
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
+
+  /// ✅ Queue ICE candidates until remoteDescription is ready
+  final List<RTCIceCandidate> _pendingCandidates = [];
+  RTCSessionDescription? _remoteDescription;
 
   /// INIT
   @override
@@ -418,40 +76,78 @@ class CallController extends GetxController {
     logCall('Signal => $type');
 
     switch (type) {
+      /// ✅ Incoming offer
+      // case 'call_offer':
+      //   callLogId = data['call_log_id'];
+      //   receiverId = data['caller_id'];
+      //   callType = data['call_type'];
+
+      //   callState.value = CallState.ringing;
+
+      //   await _createPeer(setRemoteOffer: data['offer']);
+      //   _startRingTimeout();
+      //   break;
       case 'call_offer':
-        callLogId = data['call_log_id'];
-        receiverId = data['caller_id'];
-        callType = data['call_type'];
+  callLogId = data['call_log_id'];
+  receiverId = data['caller_id'];
+  callType = data['call_type'];
 
-        callState.value = CallState.ringing;
+  callState.value = CallState.ringing;
 
-        await _createPeer(setRemoteOffer: data['offer']);
-        _startRingTimeout();
-        break;
+  await _createPeer(setRemoteOffer: data['offer']);
+  _startRingTimeout();
 
+  // 🔥 OPTIONAL: ensure UI is shown
+  if (!Get.isDialogOpen!) {
+    Get.dialog(
+      IncomingCallDialog(
+        callerName: data['caller_name'] ?? 'Unknown',
+        callType: callType,
+        callController: this,
+      ),
+      barrierDismissible: false,
+    );
+  }
+  break;
+
+
+      /// ✅ Answer received for outgoing call
       case 'call_answer':
-        callLogId = data['call_log_id']; // ⭐ VERY IMPORTANT
+        callLogId = int.tryParse(data['call_log_id'].toString());
 
         logCall('Answer received callLogId=$callLogId');
 
-        await _peer?.setRemoteDescription(
-          RTCSessionDescription(data['answer']['sdp'], data['answer']['type']),
+        final answer = RTCSessionDescription(
+          data['answer']['sdp'],
+          data['answer']['type'],
         );
+        await _peer?.setRemoteDescription(answer);
+        _remoteDescription = answer;
+
+        /// ✅ After remote description is set -> add queued ICE candidates
+        await _flushPendingIceCandidates();
 
         callState.value = CallState.ongoing;
         _startCallTimer();
         break;
 
+      /// ✅ ICE candidate
       case 'ice_candidate':
         logRTC('ICE received');
 
-        await _peer?.addCandidate(
-          RTCIceCandidate(
-            data['candidate']['candidate'],
-            data['candidate']['sdpMid'],
-            data['candidate']['sdpMLineIndex'],
-          ),
+        final candidate = RTCIceCandidate(
+          data['candidate']['candidate'],
+          data['candidate']['sdpMid'],
+          data['candidate']['sdpMLineIndex'],
         );
+
+        /// ✅ If remoteDescription not set yet, queue ICE
+        if (_peer == null || _remoteDescription == null) {
+          logRTC('ICE queued (remoteDescription not set yet)');
+          _pendingCandidates.add(candidate);
+        } else {
+          await _peer!.addCandidate(candidate);
+        }
         break;
 
       case 'call_end':
@@ -462,7 +158,7 @@ class CallController extends GetxController {
     }
   }
 
-  /// START CALL
+  /// START CALL (Outgoing)
   Future<void> startCall({
     required int receiverId,
     required String type,
@@ -492,16 +188,25 @@ class CallController extends GetxController {
     _startRingTimeout();
   }
 
-  /// ACCEPT
+  /// ACCEPT (Incoming)
   Future<void> acceptCall() async {
     logCall('Accepting call');
 
     await _ensurePermissions();
 
+    /// ✅ IMPORTANT: must have peer + remote offer already set
+    if (_peer == null || _remoteDescription == null) {
+      logCall("❌ Cannot accept call: remote offer not set yet");
+      return;
+    }
+
     final answer = await _peer!.createAnswer();
     await _peer!.setLocalDescription(answer);
 
     ws.sendCallAnswer(callLogId: callLogId!, answer: answer.toMap());
+
+    /// ✅ flush ICE after local description too
+    await _flushPendingIceCandidates();
 
     callState.value = CallState.ongoing;
     _startCallTimer();
@@ -524,51 +229,90 @@ class CallController extends GetxController {
 
   /// WEBRTC
   Future<void> _createPeer({Map<String, dynamic>? setRemoteOffer}) async {
-    if (_peer != null) return;
-
     logRTC('Creating peer');
 
-    localStream ??= await webrtc.navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': callType == 'video',
-    });
+    await _ensurePermissions();
 
-    localRenderer.srcObject = localStream;
+    /// ✅ If localStream was disposed earlier, recreate it
+    if (localStream == null) {
+      localStream = await webrtc.navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': callType == 'video',
+      });
 
-    _peer = await createPeerConnection({
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ],
-    });
-
-    for (var track in localStream!.getTracks()) {
-      await _peer!.addTrack(track, localStream!);
+      localRenderer.srcObject = localStream;
+      logRTC('Local stream created');
     }
 
-    _peer!.onTrack = (e) {
-      remoteStream = e.streams.first;
-      remoteRenderer.srcObject = remoteStream;
-      logRTC('Remote stream attached');
-    };
+    /// ✅ Create peer only once
+    if (_peer == null) {
+      _peer = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+        ],
+      });
 
-    _peer!.onIceCandidate = (c) {
-      if (c.candidate != null && callLogId != null) {
-        logRTC('ICE generated');
-        ws.sendIceCandidate(callLogId: callLogId!, candidate: c.toMap());
+      final tracks = localStream?.getTracks() ?? [];
+      logRTC("Local tracks count: ${tracks.length}");
+
+      if (tracks.isEmpty) {
+        throw Exception("No tracks found in localStream");
       }
-    };
 
+      /// ✅ Add all tracks safely
+      for (final track in tracks) {
+        await _peer!.addTrack(track, localStream!);
+      }
+
+      _peer!.onTrack = (e) {
+        if (e.streams.isNotEmpty) {
+          remoteStream = e.streams.first;
+          remoteRenderer.srcObject = remoteStream;
+          logRTC('Remote stream attached');
+        }
+      };
+
+      _peer!.onIceCandidate = (c) {
+        if (c.candidate != null && callLogId != null) {
+          logRTC('ICE generated');
+          ws.sendIceCandidate(callLogId: callLogId!, candidate: c.toMap());
+        }
+      };
+    }
+
+    /// ✅ Incoming call offer -> set remote description
     if (setRemoteOffer != null) {
-      await _peer!.setRemoteDescription(
-        RTCSessionDescription(setRemoteOffer['sdp'], setRemoteOffer['type']),
+      final offer = RTCSessionDescription(
+        setRemoteOffer['sdp'],
+        setRemoteOffer['type'],
       );
+      await _peer!.setRemoteDescription(offer);
+      _remoteDescription = offer;
       logRTC('Remote offer set');
+
+      /// ✅ After remote offer is set -> flush queued ICE
+      await _flushPendingIceCandidates();
     }
   }
 
-  //   // ======================
-  //   // CONTROLS
-  //   // ======================
+  /// ✅ Flush ICE candidates queued earlier
+  Future<void> _flushPendingIceCandidates() async {
+    if (_peer == null || _remoteDescription == null) return;
+
+    if (_pendingCandidates.isNotEmpty) {
+      logRTC("Flushing ${_pendingCandidates.length} queued ICE candidates");
+    }
+
+    for (final c in _pendingCandidates) {
+      await _peer!.addCandidate(c);
+    }
+
+    _pendingCandidates.clear();
+  }
+
+  // ======================
+  // CONTROLS
+  // ======================
   void toggleMute() {
     isMuted.toggle();
     localStream?.getAudioTracks().forEach((t) => t.enabled = !isMuted.value);
@@ -621,8 +365,15 @@ class CallController extends GetxController {
     localStream?.dispose();
     remoteStream?.dispose();
 
+    /// ✅ IMPORTANT FIX
+    localStream = null;
+    remoteStream = null;
+
     localRenderer.srcObject = null;
     remoteRenderer.srcObject = null;
+
+    _pendingCandidates.clear();
+    _remoteDescription = null;
   }
 
   @override

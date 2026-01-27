@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
+import 'package:qlickcare/call/service/call_fcm_handler.dart';
 
 import '../../main.dart';
 
@@ -91,15 +92,35 @@ class NotificationService {
   /// ----------------------------------------------------------
   /// LISTENERS
   /// ----------------------------------------------------------
-  void _setupListeners() {
-    FirebaseMessaging.onMessage.listen((message) {
-      _showLocalNotification(message);
-    });
+  // void _setupListeners() {
+  //   FirebaseMessaging.onMessage.listen((message) {
+  //     _showLocalNotification(message);
+  //   });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      print("🚀 Opened from notification: ${message.data}");
-    });
+  //   FirebaseMessaging.onMessageOpenedApp.listen((message) {
+  //     print("🚀 Opened from notification: ${message.data}");
+  //   });
+  // }
+
+
+  void _setupListeners() {
+  FirebaseMessaging.onMessage.listen((message) {
+  print('🟢 FCM(FG) RECEIVED');
+  print('🟢 FCM(FG) DATA => ${message.data}');
+  print('🟢 FCM(FG) NOTIFICATION => ${message.notification?.title}');
+
+  if (message.data['type'] == 'incoming_call') {
+    print('🟢 FCM(FG) TYPE = incoming_call');
+    handleIncomingCallFCM(message.data);
+    return;
   }
+
+  print('🟢 FCM(FG) NORMAL NOTIFICATION');
+  _showLocalNotification(message);
+});
+
+}
+
 
   /// ----------------------------------------------------------
   /// LOCAL NOTIFICATIONS

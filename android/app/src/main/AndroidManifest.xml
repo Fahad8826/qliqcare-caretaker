@@ -73,7 +73,7 @@
             android:name=".LocationForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location|camera|microphone"/>
+            android:foregroundServiceType="location"/>
 
         <!-- Flutter embedding -->
         <meta-data

@@ -131,6 +131,6 @@ class ApiService {
     await TokenService.clearTokens();
     
     // Use binding to ensure controller is initialized
-    Get.offAllNamed('/login');
+    // Get.offAllNamed('/login');
   }
 }

@@ -25,13 +25,18 @@ class todo extends StatefulWidget {
 }
 
 class _todoState extends State<todo> {
-  final BookingController bookingController = Get.put(BookingController());
-  final BookingDetailsController detailsController = Get.put(
-    BookingDetailsController(),
-  );
-  final AttendanceController attendanceController = Get.put(
-    AttendanceController(),
-  );
+  // final BookingController bookingController = Get.put(BookingController());
+  // final BookingDetailsController detailsController = Get.put(
+  //   BookingDetailsController(),
+  // );
+  // final AttendanceController attendanceController = Get.put(
+  //   AttendanceController(),
+  // );
+
+final bookingController = Get.find<BookingController>();
+final detailsController = Get.find<BookingDetailsController>();
+final attendanceController = Get.find<AttendanceController>();
+
 
   final RxInt selectedBookingId = 0.obs;
   final RxBool isExpanded = false.obs;
@@ -72,14 +77,14 @@ class _todoState extends State<todo> {
       backgroundColor: AppColors.screenBackground,
       drawer: const AppDrawer(),
       appBar: CommonAppBar(
-        title: "Tasks",
+        title: "My Tasks",
         leading: Builder(
           builder: (context) {
             return IconButton(
               icon: Icon(
                 FontAwesomeIcons.bars,
-                color: Colors.white,
-                size: isPortrait ? size.width * 0.055 : size.height * 0.065,
+                color: AppColors.background,
+                size: 22,
               ),
               onPressed: () {
                 Scaffold.of(context).openDrawer();
@@ -91,8 +96,8 @@ class _todoState extends State<todo> {
           IconButton(
             icon: Icon(
               FontAwesomeIcons.bell,
-              color: Colors.white,
-              size: isPortrait ? size.width * 0.055 : size.height * 0.065,
+              color: AppColors.background,
+              size: 22,
             ),
             onPressed: () {
               Navigator.push(
@@ -115,13 +120,13 @@ class _todoState extends State<todo> {
               children: [
                 Icon(
                   Icons.person_outline,
-                  size: isPortrait ? size.width * 0.2 : size.height * 0.25,
+                  size: isPortrait ? size.width * 0.2: size.height * 0.10,
                   color: AppColors.textSecondary.withOpacity(0.5),
                 ),
-                SizedBox(height: size.height * 0.02),
+                SizedBox(height: size.height * 0.01),
                 Text(
                   "No Patients Assigned",
-                  style: AppTextStyles.heading2.copyWith(
+                  style: AppTextStyles.body.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),

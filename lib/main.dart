@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:qlickcare/Routes/app_routes.dart';
 import 'package:qlickcare/Services/locationservice.dart';
 import 'package:qlickcare/authentication/service/tokenservice.dart';
+import 'package:qlickcare/call/service/call_fcm_handler.dart';
 
 
 import 'Utils/appcolors.dart';
@@ -16,10 +17,26 @@ import 'notification/service/notification_services.dart';
 /// ----------------------------------------------------------
 /// 🔥 Background Handler (TOP LEVEL – REQUIRED)
 /// ----------------------------------------------------------
+// Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+//   await Firebase.initializeApp();
+//   print("📩 Background message: ${message.messageId}");
+// }
+
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("📩 Background message: ${message.messageId}");
+
+  print('🟣 FCM(BG) RECEIVED');
+  print('🟣 FCM(BG) DATA => ${message.data}');
+  print('🟣 FCM(BG) NOTIFICATION => ${message.notification?.title}');
+
+  if (message.data['type'] == 'incoming_call') {
+    print('🟣 FCM(BG) TYPE = incoming_call');
+    await handleIncomingCallFCM(message.data);
+  } else {
+    print('🟣 FCM(BG) TYPE != incoming_call');
+  }
 }
+
 
 /// ----------------------------------------------------------
 /// 🔔 Local Notification Plugin (GLOBAL)
@@ -75,6 +92,8 @@ Future<void> _initializeBackgroundLocation() async {
 }
 
 
+
+
 /// ----------------------------------------------------------
 /// 🟦 App
 /// ----------------------------------------------------------
@@ -87,6 +106,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'QlickCare',
       theme: ThemeData(
+        
         textSelectionTheme: TextSelectionThemeData(
           cursorColor: AppColors.primary,
           selectionColor: AppColors.primary.withOpacity(0.3),

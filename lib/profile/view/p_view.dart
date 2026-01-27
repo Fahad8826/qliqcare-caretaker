@@ -18,6 +18,8 @@ class PView extends StatelessWidget {
   final LogoutController logoutController = Get.put(LogoutController());
   final AccountController accountController = Get.put(AccountController());
 
+  
+   
   PView({super.key});
 
   @override

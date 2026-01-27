@@ -85,7 +85,7 @@ class P_Controller extends GetxController {
         Get.snackbar("Error", "Failed to load profile");
       }
     } catch (e) {
-      Get.snackbar("Error", "Session expired. Please login again.");
+        print("Session expired. Please login again.");
     }
   }
 
@@ -104,7 +104,7 @@ class P_Controller extends GetxController {
             List<String>.from(body["work_types"].map((e) => e["value"]));
       }
     } catch (_) {
-      Get.snackbar("Error", "Failed to load work types");
+      print("Failed to load work types");
     }
   }
 
@@ -119,7 +119,7 @@ class P_Controller extends GetxController {
             List<Map<String, dynamic>>.from(jsonDecode(resp.body));
       }
     } catch (_) {
-      Get.snackbar("Error", "Failed to load specializations");
+      print("Failed to load specializations");
     }
   }
 
@@ -134,7 +134,7 @@ class P_Controller extends GetxController {
             List<Map<String, dynamic>>.from(jsonDecode(resp.body));
       }
     } catch (_) {
-      Get.snackbar("Error", "Failed to load locations");
+      print("Failed to load locations");
     }
   }
 

@@ -466,11 +466,13 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                             );
 
                             Get.back();
+
+                            controller.fetchMyComplaints();
                           },
                     child: controller.isLoading.value
                         ? SizedBox(
-                            height: size.height * 0.025,
-                            width: size.height * 0.025,
+                            height: size.height * 0.035,
+                            width: size.height * 0.035,
                             child: Loading()
                           )
                         : Text("Submit Complaint", style: AppTextStyles.button),
