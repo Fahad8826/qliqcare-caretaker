@@ -272,53 +272,53 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  // ✅ UPDATED: Audio call with proper receiver ID
-  void _startAudioCall() {
-    final receiverId = _controller.getReceiverIdForCall();
+  // // ✅ UPDATED: Audio call with proper receiver ID
+  // void _startAudioCall() {
+  //   final receiverId = _controller.getReceiverIdForCall();
 
-    if (receiverId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please send a message first to enable calling'),
-          backgroundColor: Colors.orange,
-          action: SnackBarAction(
-            label: 'OK',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
-      return;
-    }
+  //   if (receiverId == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: const Text('Please send a message first to enable calling'),
+  //         backgroundColor: Colors.orange,
+  //         action: SnackBarAction(
+  //           label: 'OK',
+  //           textColor: Colors.white,
+  //           onPressed: () {},
+  //         ),
+  //       ),
+  //     );
+  //     return;
+  //   }
 
-    print('📞 Starting audio call to user: $receiverId');
-    callController.startCall(receiverId: receiverId, type: 'audio');
-    Get.to(() => CallScreen());
-  }
+  //   print('📞 Starting audio call to user: $receiverId');
+  //   callController.startCall(receiverId: receiverId, type: 'audio');
+  //   Get.to(() => CallScreen());
+  // }
 
-  // ✅ UPDATED: Video call with proper receiver ID
-  void _startVideoCall() {
-    final receiverId = _controller.getReceiverIdForCall();
+  // // ✅ UPDATED: Video call with proper receiver ID
+  // void _startVideoCall() {
+  //   final receiverId = _controller.getReceiverIdForCall();
 
-    if (receiverId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please send a message first to enable calling'),
-          backgroundColor: Colors.orange,
-          action: SnackBarAction(
-            label: 'OK',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
-      return;
-    }
+  //   if (receiverId == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: const Text('Please send a message first to enable calling'),
+  //         backgroundColor: Colors.orange,
+  //         action: SnackBarAction(
+  //           label: 'OK',
+  //           textColor: Colors.white,
+  //           onPressed: () {},
+  //         ),
+  //       ),
+  //     );
+  //     return;
+  //   }
 
-    print('📞 Starting video call to user: $receiverId');
-    callController.startCall(receiverId: receiverId, type: 'video');
-    Get.to(() => CallScreen());
-  }
+  //   print('📞 Starting video call to user: $receiverId');
+  //   callController.startCall(receiverId: receiverId, type: 'video');
+  //   Get.to(() => CallScreen());
+  // }
 
   @override
   void dispose() {
@@ -527,23 +527,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ],
                   ),
                 ),
-                // ✅ UPDATED: Call buttons
-                IconButton(
-                  onPressed: _startAudioCall,
-                  icon: Icon(
-                    Icons.phone,
-                    color: AppColors.buttonText,
-                    size: isPortrait ? size.width * 0.06 : size.height * 0.07,
-                  ),
-                ),
-                IconButton(
-                  onPressed: _startVideoCall,
-                  icon: Icon(
-                    Icons.videocam,
-                    color: AppColors.buttonText,
-                    size: isPortrait ? size.width * 0.065 : size.height * 0.075,
-                  ),
-                ),
+                // // ✅ UPDATED: Call buttons
+                // IconButton(
+                //   onPressed: _startAudioCall,
+                //   icon: Icon(
+                //     Icons.phone,
+                //     color: AppColors.buttonText,
+                //     size: isPortrait ? size.width * 0.06 : size.height * 0.07,
+                //   ),
+                // ),
+                // IconButton(
+                //   onPressed: _startVideoCall,
+                //   icon: Icon(
+                //     Icons.videocam,
+                //     color: AppColors.buttonText,
+                //     size: isPortrait ? size.width * 0.065 : size.height * 0.075,
+                //   ),
+                // ),
               ],
             );
           }),

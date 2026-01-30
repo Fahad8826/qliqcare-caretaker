@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,6 +22,11 @@ class WebSocketService {
   int? _currentRoomId;
 
   bool get isConnected => _isConnected;
+  int? get currentRoomId => _currentRoomId;
+  void injectCallSignal(Map<String, dynamic> signal) {
+    print('📡 Injecting call signal: ${signal['type']}');
+    _callController.add(signal);
+  }
 
   // =====================================================
   // CONNECT
@@ -39,10 +43,13 @@ class WebSocketService {
       return;
     }
 
-    String baseUrl = dotenv.env['BASE_URL']!
-        .replaceAll(RegExp(r'https?://|wss?://'), '');
+    String baseUrl = dotenv.env['BASE_URL']!.replaceAll(
+      RegExp(r'https?://|wss?://'),
+      '',
+    );
 
     final wsUrl = 'wss://$baseUrl/ws/chat/$roomId/?token=$token';
+   
     print('🔌 Connecting to WebSocket: $wsUrl');
 
     try {
@@ -73,36 +80,36 @@ class WebSocketService {
     _connectionController.add(false);
   }
 
-  // =====================================================
-  // RECEIVE
-  // =====================================================
+  
   void _handleMessage(dynamic data) {
-    try {
-      final decoded = jsonDecode(data);
-      final type = decoded['type'];
-      print('📩 Received WS message: $type');
+  try {
+    final decoded = jsonDecode(data);
+    final type = decoded['type'];
 
-      // CHAT MESSAGE
-      if (type == 'chat_message') {
-        final message = decoded['message'] != null
-            ? Message.fromJson(decoded['message'])
-            : Message.fromJson(decoded);
+    print('📩 Received WS message: $type');
 
-        _messageController.add(message);
-      }
-      // FILE MESSAGE
-      else if (decoded['content'] != null || decoded['message_type'] != null) {
-        _messageController.add(Message.fromJson(decoded));
-      }
-      // CALL SIGNALING
-      else if (_isCallType(type)) {
-        _callController.add(decoded);
-      }
-    } catch (e) {
-      print('❌ WebSocket parse error: $e');
-      print('Raw data: $data');
+    // ✅ Ignore malformed call signals
+    if (_isCallType(type) && decoded['call_log_id'] == null) {
+      print('⚠️ Ignoring call signal without call_log_id');
+      return;
     }
+
+    if (type == 'chat_message') {
+      final message = decoded['message'] != null
+          ? Message.fromJson(decoded['message'])
+          : Message.fromJson(decoded);
+      _messageController.add(message);
+    } 
+    else if (_isCallType(type)) {
+      _callController.add(decoded);
+    }
+  } catch (e) {
+    print('❌ WebSocket parse error: $e');
   }
+}
+
+
+
 
   bool _isCallType(String? type) {
     return [
@@ -116,6 +123,7 @@ class WebSocketService {
       'peer_muted',
       'call_video_toggle',
       'peer_video_toggle',
+      'incoming_call_notification', // ✅ ADD THIS
     ].contains(type);
   }
 
@@ -123,10 +131,7 @@ class WebSocketService {
   // CHAT SEND
   // =====================================================
   void sendMessage(String content) {
-    send({
-      'type': 'chat_message',
-      'content': content,
-    });
+    send({'type': 'chat_message', 'content': content});
   }
 
   // =====================================================
@@ -160,19 +165,12 @@ class WebSocketService {
     required int callLogId,
     required Map<String, dynamic> answer,
   }) {
-    send({
-      'type': 'call_answer',
-      'call_log_id': callLogId,
-      'answer': answer,
-    });
+    send({'type': 'call_answer', 'call_log_id': callLogId, 'answer': answer});
   }
 
   /// Decline call
   void declineCall(int callLogId) {
-    send({
-      'type': 'call_decline',
-      'call_log_id': callLogId,
-    });
+    send({'type': 'call_decline', 'call_log_id': callLogId});
   }
 
   /// Send ICE candidate
@@ -189,29 +187,16 @@ class WebSocketService {
 
   /// End call
   void endCall(int callLogId) {
-    send({
-      'type': 'call_end',
-      'call_log_id': callLogId,
-    });
+    send({'type': 'call_end', 'call_log_id': callLogId});
   }
 
   /// Mute / Unmute
-  void muteAudio({
-    required int callLogId,
-    required bool muted,
-  }) {
-    send({
-      'type': 'call_mute',
-      'call_log_id': callLogId,
-      'audio_muted': muted,
-    });
+  void muteAudio({required int callLogId, required bool muted}) {
+    send({'type': 'call_mute', 'call_log_id': callLogId, 'audio_muted': muted});
   }
 
   /// Video ON / OFF
-  void toggleVideo({
-    required int callLogId,
-    required bool enabled,
-  }) {
+  void toggleVideo({required int callLogId, required bool enabled}) {
     send({
       'type': 'call_video_toggle',
       'call_log_id': callLogId,
@@ -227,7 +212,7 @@ class WebSocketService {
       print('⚠️ Cannot send: WebSocket not connected');
       return;
     }
-    
+
     final message = jsonEncode(payload);
     print('📤 Sending: ${payload['type']}');
     _webSocket!.add(message);
@@ -262,6 +247,3 @@ class WebSocketService {
     _connectionController.close();
   }
 }
-
-
-

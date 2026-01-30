@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:io';
 
@@ -92,59 +91,101 @@ class NotificationService {
   /// ----------------------------------------------------------
   /// LISTENERS
   /// ----------------------------------------------------------
-  // void _setupListeners() {
-  //   FirebaseMessaging.onMessage.listen((message) {
-  //     _showLocalNotification(message);
-  //   });
-
-  //   FirebaseMessaging.onMessageOpenedApp.listen((message) {
-  //     print("🚀 Opened from notification: ${message.data}");
-  //   });
-  // }
-
-
   void _setupListeners() {
-  FirebaseMessaging.onMessage.listen((message) {
-  print('🟢 FCM(FG) RECEIVED');
-  print('🟢 FCM(FG) DATA => ${message.data}');
-  print('🟢 FCM(FG) NOTIFICATION => ${message.notification?.title}');
+    FirebaseMessaging.onMessage.listen((message) {
+      print('🟢 FCM(FG) RECEIVED');
+      print('🟢 FCM(FG) DATA => ${message.data}');
+      print('🟢 FCM(FG) NOTIFICATION => ${message.notification?.title}');
 
-  if (message.data['type'] == 'incoming_call') {
-    print('🟢 FCM(FG) TYPE = incoming_call');
-    handleIncomingCallFCM(message.data);
-    return;
+      if (message.data['type'] == 'incoming_call') {
+        print('🟢 FCM(FG) TYPE = incoming_call');
+        handleIncomingCallFCM(message.data);
+        return;
+      }
+
+      print('🟢 FCM(FG) NORMAL NOTIFICATION');
+      _showLocalNotification(message);
+    });
+
+    // ✅ NEW: Handle notification taps
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      print("🚀 Opened from notification: ${message.data}");
+      
+      if (message.data['type'] == 'incoming_call') {
+        handleIncomingCallFCM(message.data);
+      }
+    });
   }
-
-  print('🟢 FCM(FG) NORMAL NOTIFICATION');
-  _showLocalNotification(message);
-});
-
-}
-
 
   /// ----------------------------------------------------------
   /// LOCAL NOTIFICATIONS
   /// ----------------------------------------------------------
   Future<void> initLocalNotifications() async {
-    const androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const initSettings = InitializationSettings(android: androidInit);
+    // ✅ Add notification tap handler
+    final initSettings = InitializationSettings(
+      android: androidInit,
+    );
 
     await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-    const channel = AndroidNotificationChannel(
+    // ✅ EXISTING CHANNEL - Keep as is
+    const highImportanceChannel = AndroidNotificationChannel(
       'high_importance_channel',
       'High Importance Notifications',
       importance: Importance.high,
     );
 
-    await flutterLocalNotificationsPlugin
+    // ✅ NEW CHANNEL - For incoming calls
+    const callChannel = AndroidNotificationChannel(
+      'call_channel',
+      'Incoming Calls',
+      description: 'Notifications for incoming calls',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    final androidPlugin = flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    // ✅ Create BOTH channels
+    await androidPlugin!.createNotificationChannel(highImportanceChannel);
+    await androidPlugin!.createNotificationChannel(callChannel);
   }
 
+  // ✅ NEW: Handle notification tap
+  Future<void> _onNotificationTap(NotificationResponse details) async {
+    print('🔔 Notification tapped: ${details.payload}');
+    
+    if (details.payload != null) {
+      try {
+        final data = jsonDecode(details.payload!);
+        
+        if (data['type'] == 'incoming_call') {
+          // Handle based on action
+          if (details.actionId == 'answer') {
+            print('✅ User tapped ANSWER');
+            await handleIncomingCallFCM(data);
+          } else if (details.actionId == 'decline') {
+            print('❌ User tapped DECLINE');
+            // TODO: Call decline API
+            // You can add a decline method in your call service
+          } else {
+            // Notification body tapped (not action button)
+            print('📱 Notification body tapped');
+            await handleIncomingCallFCM(data);
+          }
+        }
+      } catch (e) {
+        print('❌ Error handling notification tap: $e');
+      }
+    }
+  }
+
+  // ✅ KEEP EXISTING - Normal notifications
   void _showLocalNotification(RemoteMessage message) {
     if (message.notification == null) return;
 

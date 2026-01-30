@@ -4,14 +4,12 @@ import 'package:get/get.dart';
 import 'package:qlickcare/attendance/controller/attendancecontroller.dart';
 import 'package:qlickcare/bookings/controller/bookingcontroller.dart';
 import 'package:qlickcare/bookings/controller/bookingdetailscontroller.dart';
-
 import 'package:qlickcare/chat/controller/chat_controller.dart';
 import 'package:qlickcare/chat/view/chatscreen.dart';
 import 'package:qlickcare/bookings/view/todo.dart';
 import 'package:qlickcare/profile/view/p_view.dart';
 import 'package:qlickcare/profile/controller/profilecontroller.dart';
 import 'package:qlickcare/Home/homepage.dart';
-
 import 'package:qlickcare/Services/locationservice.dart';
 import 'package:qlickcare/notification/service/notification_services.dart';
 import 'package:qlickcare/authentication/service/tokenservice.dart';
@@ -39,6 +37,7 @@ class _MainHomeState extends State<MainHome> {
 
   bool _permissionDialogShown = false;
   bool _fcmInitialized = false;
+  bool _controllersInitialized = false;
 
   // =========================
   // INIT
@@ -49,12 +48,8 @@ class _MainHomeState extends State<MainHome> {
 
     pageController = PageController(initialPage: selectedIndex);
     
-
-    Get.put(P_Controller(), permanent: true);
-    Get.put(ChatController(), permanent: true);
-    Get.put(BookingController(), permanent: true);
-    Get.put(BookingDetailsController(), permanent: true);
-    Get.put(AttendanceController(), permanent: true);
+    // ✅ Initialize controllers AND fetch critical data
+    _initializeControllers();
 
     _initFCM();
     _printAuthTokens();
@@ -62,6 +57,45 @@ class _MainHomeState extends State<MainHome> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndRequestPermissions();
     });
+  }
+
+  // =========================
+  // INITIALIZE CONTROLLERS + PRE-LOAD DATA
+  // =========================
+  Future<void> _initializeControllers() async {
+    if (_controllersInitialized) return;
+    _controllersInitialized = true;
+
+    print("⏱️ Controller initialization started");
+    final startTime = DateTime.now();
+
+    // Step 1: Initialize all controllers
+    Get.put(P_Controller(), permanent: true);
+    Get.put(ChatController(), permanent: true);
+    Get.put(BookingController(), permanent: true);
+    Get.put(BookingDetailsController(), permanent: true);
+    Get.put(AttendanceController(), permanent: true);
+
+    print("✅ Controllers created in: ${DateTime.now().difference(startTime).inMilliseconds}ms");
+
+    // Step 2: Pre-fetch critical data for HomePage (parallel loading)
+    final dataStartTime = DateTime.now();
+    
+    await Future.wait([
+      // ✅ Most critical: Homepage data
+      Get.find<BookingController>().fetchOngoingBookings(),
+      
+      // ✅ Also critical: Profile data
+      Get.find<P_Controller>().fetchAll(),
+      
+      // ⏳ Less critical: Chat rooms (can load in background)
+      Get.find<ChatController>().fetchChatRooms(),
+    ]).catchError((e) {
+      print("❌ Error pre-loading data: $e");
+    });
+
+    print("✅ Data pre-loaded in: ${DateTime.now().difference(dataStartTime).inMilliseconds}ms");
+    print("✅ Total initialization: ${DateTime.now().difference(startTime).inMilliseconds}ms");
   }
 
   // =========================
@@ -132,6 +166,12 @@ class _MainHomeState extends State<MainHome> {
   // =========================
   void _refreshPage(int index) {
     switch (index) {
+      case 0:
+        // ✅ Refresh home page bookings
+        if (Get.isRegistered<BookingController>()) {
+          Get.find<BookingController>().fetchOngoingBookings();
+        }
+        break;
       case 2:
         if (Get.isRegistered<ChatController>()) {
           Get.find<ChatController>().fetchChatRooms();
