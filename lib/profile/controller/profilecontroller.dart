@@ -1,10 +1,9 @@
-
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 
 import '../model/profile_model.dart';
@@ -28,10 +27,23 @@ class P_Controller extends GetxController {
   late final String baseUrl;
   final Duration _timeout = const Duration(seconds: 20);
 
+  // ✅ NEW: Cache keys
+  static const String _cacheKeyProfile = 'cached_profile';
+  static const String _cacheKeyWorkTypes = 'cached_work_types';
+  static const String _cacheKeySpecializations = 'cached_specializations';
+  static const String _cacheKeyLocations = 'cached_locations';
+  static const String _cacheKeyTimestamp = 'cache_timestamp';
+  static const Duration _cacheDuration = Duration(minutes: 30);
+
   @override
   void onInit() {
     super.onInit();
     baseUrl = dotenv.env['BASE_URL']?.trim() ?? "";
+    
+    // ✅ NEW: Load cached data first for instant display
+    _loadCachedData();
+    
+    // Then fetch fresh data
     fetchAll();
   }
 
@@ -43,23 +55,105 @@ class P_Controller extends GetxController {
     specializationList.clear();
     locationsList.clear();
     profile.value = Profile(specializationIds: [], workTypes: []);
-    dosTextController = null;
-    dontsTextController = null;
+    dosTextController?.dispose();
+    dontsTextController?.dispose();
     super.dispose();
   }
 
+  // ✅ NEW: Load cached data
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final timestamp = prefs.getInt(_cacheKeyTimestamp) ?? 0;
+      final cacheAge = DateTime.now().millisecondsSinceEpoch - timestamp;
+      
+      if (cacheAge < _cacheDuration.inMilliseconds) {
+        final cachedProfile = prefs.getString(_cacheKeyProfile);
+        if (cachedProfile != null) {
+          profile.value = Profile.fromJson(jsonDecode(cachedProfile));
+        }
+
+        final cachedWorkTypes = prefs.getString(_cacheKeyWorkTypes);
+        if (cachedWorkTypes != null) {
+          workTypesList.value = List<String>.from(jsonDecode(cachedWorkTypes));
+        }
+
+        final cachedSpecs = prefs.getString(_cacheKeySpecializations);
+        if (cachedSpecs != null) {
+          final decoded = jsonDecode(cachedSpecs) as List;
+          specializationList.value = decoded
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+
+        final cachedLocs = prefs.getString(_cacheKeyLocations);
+        if (cachedLocs != null) {
+          final decoded = jsonDecode(cachedLocs) as List;
+          locationsList.value = decoded
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+      }
+    } catch (e) {
+      print("Error loading cached data: $e");
+    }
+  }
+
+  // ✅ NEW: Save to cache
+  Future<void> _saveToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      await prefs.setString(_cacheKeyProfile, jsonEncode(profile.value.toJson()));
+      await prefs.setString(_cacheKeyWorkTypes, jsonEncode(workTypesList));
+      await prefs.setString(_cacheKeySpecializations, jsonEncode(specializationList));
+      await prefs.setString(_cacheKeyLocations, jsonEncode(locationsList));
+      await prefs.setInt(_cacheKeyTimestamp, DateTime.now().millisecondsSinceEpoch);
+    } catch (e) {
+      print("Error saving to cache: $e");
+    }
+  }
+
+  // ✅ NEW: Clear cache
+  Future<void> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_cacheKeyProfile);
+      await prefs.remove(_cacheKeyWorkTypes);
+      await prefs.remove(_cacheKeySpecializations);
+      await prefs.remove(_cacheKeyLocations);
+      await prefs.remove(_cacheKeyTimestamp);
+    } catch (e) {
+      print("Error clearing cache: $e");
+    }
+  }
+
   // -------------------------
-  // FETCH EVERYTHING
+  // FETCH EVERYTHING (UPDATED)
   // -------------------------
   Future<void> fetchAll() async {
-    isLoading(true);
+    // ✅ UPDATED: Only show loading if no cached data
+    if (profile.value.fullName == null) {
+      isLoading(true);
+    }
+    
     await Future.wait([
       fetchProfile(),
       fetchWorkTypes(),
       fetchSpecializations(),
       fetchLocations(),
     ]);
+    
+    // ✅ NEW: Save to cache after successful fetch
+    await _saveToCache();
+    
     isLoading(false);
+  }
+
+  // ✅ NEW: Refresh method for pull-to-refresh
+  Future<void> refreshProfile() async {
+    await fetchAll();
   }
 
   // -------------------------
@@ -85,12 +179,12 @@ class P_Controller extends GetxController {
         Get.snackbar("Error", "Failed to load profile");
       }
     } catch (e) {
-        print("Session expired. Please login again.");
+      print("Session expired. Please login again.");
     }
   }
 
   // -------------------------
-  // PUBLIC DATA (NO AUTH)
+  // PUBLIC DATA (NO AUTH) - UPDATED WITH TYPE SAFETY
   // -------------------------
   Future<void> fetchWorkTypes() async {
     try {
@@ -103,8 +197,8 @@ class P_Controller extends GetxController {
         workTypesList.value =
             List<String>.from(body["work_types"].map((e) => e["value"]));
       }
-    } catch (_) {
-      print("Failed to load work types");
+    } catch (e) {
+      print("Failed to load work types: $e");
     }
   }
 
@@ -115,11 +209,14 @@ class P_Controller extends GetxController {
           .timeout(_timeout);
 
       if (resp.statusCode == 200) {
-        specializationList.value =
-            List<Map<String, dynamic>>.from(jsonDecode(resp.body));
+        // ✅ FIXED: Type-safe casting
+        final decoded = jsonDecode(resp.body) as List;
+        specializationList.value = decoded
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
       }
-    } catch (_) {
-      print("Failed to load specializations");
+    } catch (e) {
+      print("Failed to load specializations: $e");
     }
   }
 
@@ -130,16 +227,19 @@ class P_Controller extends GetxController {
           .timeout(_timeout);
 
       if (resp.statusCode == 200) {
-        locationsList.value =
-            List<Map<String, dynamic>>.from(jsonDecode(resp.body));
+        // ✅ FIXED: Type-safe casting
+        final decoded = jsonDecode(resp.body) as List;
+        locationsList.value = decoded
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
       }
-    } catch (_) {
-      print("Failed to load locations");
+    } catch (e) {
+      print("Failed to load locations: $e");
     }
   }
 
   // -------------------------
-  // UPDATE PROFILE
+  // UPDATE PROFILE (UPDATED)
   // -------------------------
   Future<bool> updateProfile() async {
     isUpdating(true);
@@ -158,6 +258,10 @@ class P_Controller extends GetxController {
 
       if (success) {
         await updateDosDonts(dos: dos, donts: donts);
+        
+        // ✅ NEW: Clear cache after update
+        await clearCache();
+        
         Get.snackbar("Success", "Profile updated successfully",
             backgroundColor: Colors.green, colorText: Colors.white);
       }
@@ -188,7 +292,8 @@ class P_Controller extends GetxController {
         return true;
       }
       return false;
-    } catch (_) {
+    } catch (e) {
+      print("Error updating profile: $e");
       return false;
     }
   }
@@ -221,7 +326,8 @@ class P_Controller extends GetxController {
         return true;
       }
       return false;
-    } catch (_) {
+    } catch (e) {
+      print("Error updating profile with image: $e");
       return false;
     }
   }
@@ -253,7 +359,8 @@ class P_Controller extends GetxController {
         return true;
       }
       return false;
-    } catch (_) {
+    } catch (e) {
+      print("Error updating dos/donts: $e");
       return false;
     }
   }
@@ -278,7 +385,8 @@ class P_Controller extends GetxController {
       );
 
       return response.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      print("Error updating location: $e");
       return false;
     }
   }

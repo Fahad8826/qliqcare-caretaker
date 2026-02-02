@@ -103,7 +103,7 @@ class _ChatscreenState extends State<Chatscreen> {
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.chatRooms.isEmpty) {
-                return const Center(child: Loading());
+                return _buildShimmerLoader(size);
               }
 
               if (controller.chatRooms.isEmpty) {
@@ -286,6 +286,147 @@ class _ChatscreenState extends State<Chatscreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Shimmer Loader Widget
+  Widget _buildShimmerLoader(Size size) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(vertical: size.height * 0.01),
+      itemCount: 8,
+      itemBuilder: (_, index) {
+        return _ShimmerChatItem(size: size);
+      },
+    );
+  }
+}
+
+// Shimmer Chat Item Widget
+class _ShimmerChatItem extends StatefulWidget {
+  final Size size;
+
+  const _ShimmerChatItem({required this.size});
+
+  @override
+  State<_ShimmerChatItem> createState() => _ShimmerChatItemState();
+}
+
+class _ShimmerChatItemState extends State<_ShimmerChatItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shimmerController;
+  late Animation<double> _shimmerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _shimmerAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _shimmerController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orientation = MediaQuery.of(context).orientation;
+    final isPortrait = orientation == Orientation.portrait;
+
+    return AnimatedBuilder(
+      animation: _shimmerAnimation,
+      builder: (context, child) {
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.size.width * 0.05,
+            vertical: widget.size.height * 0.015,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.border,
+                width: 0.5,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Avatar Shimmer
+              Opacity(
+                opacity: _shimmerAnimation.value,
+                child: Container(
+                  width: isPortrait ? widget.size.width * 0.13 : widget.size.height * 0.15,
+                  height: isPortrait ? widget.size.width * 0.13 : widget.size.height * 0.15,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withOpacity(0.1),
+                  ),
+                ),
+              ),
+
+              SizedBox(width: widget.size.width * 0.035),
+
+              // Content Shimmer
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Opacity(
+                      opacity: _shimmerAnimation.value,
+                      child: Container(
+                        width: widget.size.width * 0.4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: widget.size.height * 0.004),
+                    Opacity(
+                      opacity: _shimmerAnimation.value,
+                      child: Container(
+                        width: widget.size.width * 0.6,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(width: widget.size.width * 0.025),
+
+              // Time Shimmer
+              Opacity(
+                opacity: _shimmerAnimation.value,
+                child: Container(
+                  width: 40,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

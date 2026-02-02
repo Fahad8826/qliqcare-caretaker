@@ -5,10 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qlickcare/call/controller/call_controller.dart';
-import 'package:qlickcare/Utils/loading.dart';
 import 'package:qlickcare/call/view/call_screen.dart';
 import 'package:qlickcare/chat/controller/chat_controller.dart';
-// ✅ ADD THIS IMPORT
 
 import 'package:qlickcare/chat/model/chat_model.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
@@ -26,7 +24,7 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   late final ChatController _controller;
-  late final CallController callController;
+  // late final CallController callController;
   late final TextEditingController _messageController;
   late final ScrollController _scrollController;
   final ImagePicker _picker = ImagePicker();
@@ -42,30 +40,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _scrollController = ScrollController();
 
     // Initialize CallController with WebSocketService
-    callController = Get.put(
-      CallController(_controller.wsService),
-      permanent: true,
-    );
+    // callController = Get.put(
+    //   CallController(_controller.wsService),
+    //   permanent: true,
+    // );
 
     _initializeChat();
-    _setupCallListener(); // ✅ ADD CALL LISTENER
+    // _setupCallListener();
   }
 
-  // ✅ NEW: Listen for incoming calls
-  void _setupCallListener() {
-    callController.callState.listen((state) {
-      if (state == CallState.ringing && mounted) {
-        final callerName = _controller.getCallerName();
+  // void _setupCallListener() {
+  //   callController.callState.listen((state) {
+  //     if (state == CallState.ringing && mounted) {
+  //       final callerName = _controller.getCallerName();
 
-        showIncomingCallDialog(
-          context: context,
-          callerName: callerName,
-          callType: callController.callType,
-          callController: callController,
-        );
-      }
-    });
-  }
+  //       showIncomingCallDialog(
+  //         context: context,
+  //         callerName: callerName,
+  //         callType: callController.callType,
+  //         callController: callController,
+  //       );
+  //     }
+  //   });
+  // }
 
   Future<void> _initializeChat() async {
     if (_isInitialized) return;
@@ -73,10 +70,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     setState(() => _isLoadingInitialData = true);
 
     try {
-      // Load messages first (this will extract user IDs)
       await _controller.fetchMessages(widget.chatId);
-
-      // Load chat details
       _controller.fetchChatDetail(widget.chatId).catchError((e) {
         print('⚠️ Failed to load chat details: $e');
       });
@@ -272,54 +266,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  // // ✅ UPDATED: Audio call with proper receiver ID
-  // void _startAudioCall() {
-  //   final receiverId = _controller.getReceiverIdForCall();
-
-  //   if (receiverId == null) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: const Text('Please send a message first to enable calling'),
-  //         backgroundColor: Colors.orange,
-  //         action: SnackBarAction(
-  //           label: 'OK',
-  //           textColor: Colors.white,
-  //           onPressed: () {},
-  //         ),
-  //       ),
-  //     );
-  //     return;
-  //   }
-
-  //   print('📞 Starting audio call to user: $receiverId');
-  //   callController.startCall(receiverId: receiverId, type: 'audio');
-  //   Get.to(() => CallScreen());
-  // }
-
-  // // ✅ UPDATED: Video call with proper receiver ID
-  // void _startVideoCall() {
-  //   final receiverId = _controller.getReceiverIdForCall();
-
-  //   if (receiverId == null) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: const Text('Please send a message first to enable calling'),
-  //         backgroundColor: Colors.orange,
-  //         action: SnackBarAction(
-  //           label: 'OK',
-  //           textColor: Colors.white,
-  //           onPressed: () {},
-  //         ),
-  //       ),
-  //     );
-  //     return;
-  //   }
-
-  //   print('📞 Starting video call to user: $receiverId');
-  //   callController.startCall(receiverId: receiverId, type: 'video');
-  //   Get.to(() => CallScreen());
-  // }
-
   @override
   void dispose() {
     _messageController.dispose();
@@ -341,7 +287,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           _buildHeader(size, isPortrait),
           Expanded(
             child: _isLoadingInitialData
-                ? const Center(child: Loading())
+                ? _buildChatShimmer(size, isPortrait)
                 : Obx(() {
                     if (_controller.messages.isEmpty) {
                       return Center(
@@ -510,7 +456,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                connected ? "Online" : "Offline",
+                                connected ? "connected" : "connecting...",
                                 style: AppTextStyles.small.copyWith(
                                   color: AppColors.buttonText.withValues(
                                     alpha: 0.9,
@@ -527,28 +473,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ],
                   ),
                 ),
-                // // ✅ UPDATED: Call buttons
-                // IconButton(
-                //   onPressed: _startAudioCall,
-                //   icon: Icon(
-                //     Icons.phone,
-                //     color: AppColors.buttonText,
-                //     size: isPortrait ? size.width * 0.06 : size.height * 0.07,
-                //   ),
-                // ),
-                // IconButton(
-                //   onPressed: _startVideoCall,
-                //   icon: Icon(
-                //     Icons.videocam,
-                //     color: AppColors.buttonText,
-                //     size: isPortrait ? size.width * 0.065 : size.height * 0.075,
-                //   ),
-                // ),
               ],
             );
           }),
         ),
       ),
+    );
+  }
+
+  // ==================== Chat Shimmer Loader ====================
+  Widget _buildChatShimmer(Size size, bool isPortrait) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(
+        horizontal: size.width * 0.04,
+        vertical: size.height * 0.02,
+      ),
+      itemCount: 8,
+      itemBuilder: (_, index) {
+        final isRight = index % 3 == 0; // Mix of left and right messages
+        return _ChatMessageShimmer(
+          size: size,
+          isPortrait: isPortrait,
+          isRight: isRight,
+        );
+      },
     );
   }
 
@@ -672,7 +620,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               : AppColors.screenBackground,
           borderRadius: BorderRadius.circular(6),
         ),
-
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -804,7 +751,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: Loading(),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.buttonText,
+                          ),
                         ),
                       ),
                     )
@@ -844,5 +794,130 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     } catch (_) {
       return "";
     }
+  }
+}
+
+// ==================== Chat Message Shimmer Widget ====================
+class _ChatMessageShimmer extends StatefulWidget {
+  final Size size;
+  final bool isPortrait;
+  final bool isRight;
+
+  const _ChatMessageShimmer({
+    required this.size,
+    required this.isPortrait,
+    required this.isRight,
+  });
+
+  @override
+  State<_ChatMessageShimmer> createState() => _ChatMessageShimmerState();
+}
+
+class _ChatMessageShimmerState extends State<_ChatMessageShimmer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shimmerController;
+  late Animation<double> _shimmerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _shimmerAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _shimmerController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _shimmerAnimation,
+      builder: (context, child) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: widget.size.height * 0.015),
+          child: Align(
+            alignment:
+                widget.isRight ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              constraints: BoxConstraints(maxWidth: widget.size.width * 0.65),
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.size.width * 0.03,
+                vertical: widget.size.height * 0.012,
+              ),
+              decoration: BoxDecoration(
+                color: widget.isRight
+                    ? AppColors.primary.withOpacity(0.15)
+                    : AppColors.background,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: widget.isRight
+                      ? const Radius.circular(14)
+                      : const Radius.circular(4),
+                  bottomRight: widget.isRight
+                      ? const Radius.circular(4)
+                      : const Radius.circular(14),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Message text shimmer
+                  Opacity(
+                    opacity: _shimmerAnimation.value,
+                    child: Container(
+                      width: widget.size.width * 0.5,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: widget.size.height * 0.006),
+                  // Second line shimmer
+                  Opacity(
+                    opacity: _shimmerAnimation.value,
+                    child: Container(
+                      width: widget.size.width * 0.35,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: widget.size.height * 0.008),
+                  // Time shimmer
+                  Opacity(
+                    opacity: _shimmerAnimation.value,
+                    child: Container(
+                      width: 50,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

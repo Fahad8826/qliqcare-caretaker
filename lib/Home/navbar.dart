@@ -47,7 +47,7 @@ class _MainHomeState extends State<MainHome> {
     super.initState();
 
     pageController = PageController(initialPage: selectedIndex);
-    
+
     // ✅ Initialize controllers AND fetch critical data
     _initializeControllers();
 
@@ -57,6 +57,9 @@ class _MainHomeState extends State<MainHome> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndRequestPermissions();
     });
+
+
+    
   }
 
   // =========================
@@ -76,26 +79,32 @@ class _MainHomeState extends State<MainHome> {
     Get.put(BookingDetailsController(), permanent: true);
     Get.put(AttendanceController(), permanent: true);
 
-    print("✅ Controllers created in: ${DateTime.now().difference(startTime).inMilliseconds}ms");
+    print(
+      "✅ Controllers created in: ${DateTime.now().difference(startTime).inMilliseconds}ms",
+    );
 
     // Step 2: Pre-fetch critical data for HomePage (parallel loading)
     final dataStartTime = DateTime.now();
-    
+
     await Future.wait([
       // ✅ Most critical: Homepage data
       Get.find<BookingController>().fetchOngoingBookings(),
-      
+
       // ✅ Also critical: Profile data
       Get.find<P_Controller>().fetchAll(),
-      
+
       // ⏳ Less critical: Chat rooms (can load in background)
       Get.find<ChatController>().fetchChatRooms(),
     ]).catchError((e) {
       print("❌ Error pre-loading data: $e");
     });
 
-    print("✅ Data pre-loaded in: ${DateTime.now().difference(dataStartTime).inMilliseconds}ms");
-    print("✅ Total initialization: ${DateTime.now().difference(startTime).inMilliseconds}ms");
+    print(
+      "✅ Data pre-loaded in: ${DateTime.now().difference(dataStartTime).inMilliseconds}ms",
+    );
+    print(
+      "✅ Total initialization: ${DateTime.now().difference(startTime).inMilliseconds}ms",
+    );
   }
 
   // =========================
