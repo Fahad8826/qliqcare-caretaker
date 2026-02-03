@@ -188,9 +188,9 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showButton =
-    booking.booking_status.toUpperCase() == "ONGOING" ||
-    booking.booking_status.toUpperCase() == "WORK_COMPLETED";
+    // final showButton =
+    // booking.booking_status.toUpperCase() == "ONGOING" ||
+    // booking.booking_status.toUpperCase() == "WORK_COMPLETED";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -291,7 +291,7 @@ class _BookingCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Patient Details Button
-            if (showButton)
+            // if (showButton)
   Align(
     alignment: Alignment.centerRight,
     child: ElevatedButton(

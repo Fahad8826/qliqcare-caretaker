@@ -2,7 +2,7 @@ name: qlickcare
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.3+27
+version: 1.0.3+30
 
 environment:
   sdk: ^3.8.1

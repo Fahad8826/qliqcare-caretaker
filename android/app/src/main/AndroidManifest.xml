@@ -10,10 +10,7 @@
     <!-- your normal permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- <uses-permission android:name="android.permission.CAMERA"/> -->
-    <!-- <uses-permission android:name="android.permission.RECORD_AUDIO"/> -->
 
-    <!-- <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> -->
 
     <!-- ===================== -->
     <!-- 📍 Location -->
@@ -26,20 +23,8 @@
     <!-- ===================== -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/> -->
 
-    <!-- ===================== -->
-    <!-- 📺 Full-Screen Intent (for calls) -->
-    <!-- ===================== -->
-    <!-- <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/> -->
-    <!-- <uses-permission android:name="android.permission.VIBRATE"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/> -->
-
-
-    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
-    <uses-permission android:name="android.permission.READ_SMS"/>
-    <uses-permission android:name="com.google.android.gms.permission.READ_PHONE_STATE"/>
+    <uses-permission android:name="com.google.android.gms.permission.READ_PHONE_STATE"/> -->
 
 
     <queries>

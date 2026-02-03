@@ -22,5 +22,5 @@ ios/Flutter/ephemeral/
 # macOS
 macos/Flutter/ephemeral/
 
-# # Environment files
-# .env
+# Environment files
+.env
