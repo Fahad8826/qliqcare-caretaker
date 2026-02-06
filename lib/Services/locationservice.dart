@@ -242,7 +242,7 @@ class LocationService {
 
       debugPrint("🌍 Sending location to API: $roundedLat, $roundedLng");
 
-      final response = await http.patch(
+      final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",

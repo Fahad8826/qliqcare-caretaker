@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sms_autofill/sms_autofill.dart';
@@ -17,35 +18,72 @@ class OtpPage extends StatefulWidget {
 class _OtpPageState extends State<OtpPage> with CodeAutoFill {
   final OtpController controller = Get.put(OtpController());
   final TextEditingController otpController = TextEditingController();
+  String? appSignature;
 
   @override
   void initState() {
     super.initState();
-    listenForCode();
-    
-    SmsAutoFill().getAppSignature.then((signature) {
-    debugPrint("🔑 APP HASH: $signature");
-  }); 
+    _initializeSmsListener();
+  }
+
+  /// ✅ Initialize SMS listener properly
+  Future<void> _initializeSmsListener() async {
+    try {
+      // Get app signature
+      appSignature = await SmsAutoFill().getAppSignature;
+      debugPrint("🔑 APP HASH: $appSignature");
+
+      // Start listening with a small delay to ensure everything is ready
+      await Future.delayed(const Duration(milliseconds: 300));
+      listenForCode();
+      debugPrint("👂 SMS Listener started successfully");
+    } catch (e) {
+      debugPrint("❌ Error initializing SMS listener: $e");
+    }
   }
 
   /// ✅ Called automatically when SMS arrives
   @override
   void codeUpdated() {
-    if (code == null) return;
+    debugPrint("🚨 codeUpdated() CALLED!");
+    debugPrint("📩 Code value: $code");
 
-    print("📩 OTP received: $code");
+    if (code == null || code!.isEmpty) {
+      debugPrint("⚠️ Code is null or empty");
+      return;
+    }
 
-    otpController.text = code!;
+    debugPrint("✅ OTP received: $code");
 
-    controller.verifyOtp(
-      phoneNumber: widget.phoneNumber,
-      otp: code!,
-    );
+    // Update text field
+    setState(() {
+      otpController.text = code!;
+    });
+
+    // Auto-verify after a tiny delay
+    Future.delayed(const Duration(milliseconds: 100), () {
+      controller.verifyOtp(phoneNumber: widget.phoneNumber, otp: code!);
+    });
+  }
+
+  /// ✅ Restart listener (for resend OTP)
+  Future<void> _restartListener() async {
+    try {
+      debugPrint("🔄 Restarting SMS listener...");
+      cancel(); // Cancel old listener
+      await Future.delayed(const Duration(milliseconds: 300));
+      listenForCode(); // Start new listener
+      debugPrint("✅ SMS Listener restarted");
+    } catch (e) {
+      debugPrint("❌ Error restarting listener: $e");
+    }
   }
 
   @override
   void dispose() {
-    cancel(); // ✅ Stop listener
+    debugPrint("🧹 Disposing OTP page...");
+    cancel(); // Stop listener
+    unregisterListener(); // Unregister completely
     otpController.dispose();
     super.dispose();
   }
@@ -89,12 +127,30 @@ class _OtpPageState extends State<OtpPage> with CodeAutoFill {
                   codeLength: 6,
                   decoration: UnderlineDecoration(
                     colorBuilder: FixedColorBuilder(AppColors.primary),
+                    lineHeight: 2,
+                    lineStrokeCap: StrokeCap.round,
                   ),
+                  currentCode: otpController.text,
                   onCodeSubmitted: (otp) {
-                    controller.verifyOtp(
-                      phoneNumber: widget.phoneNumber,
-                      otp: otp,
-                    );
+                    debugPrint("🎯 OTP Submitted: $otp");
+                    if (otp.length == 6) {
+                      controller.verifyOtp(
+                        phoneNumber: widget.phoneNumber,
+                        otp: otp,
+                      );
+                    }
+                  },
+                  onCodeChanged: (code) {
+                    debugPrint("📝 Code changed: $code");
+                    // Auto-submit when complete
+                    if (code?.length == 6) {
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        controller.verifyOtp(
+                          phoneNumber: widget.phoneNumber,
+                          otp: code!,
+                        );
+                      });
+                    }
                   },
                 ),
 
@@ -106,19 +162,16 @@ class _OtpPageState extends State<OtpPage> with CodeAutoFill {
                     text: "Continue",
                     isLoading: controller.isLoading.value,
                     onPressed: () {
-                      final otp = otpController.text;
+                      final otp = otpController.text.trim();
+                      debugPrint("📤 Manual submit - OTP: $otp");
+
                       if (otp.length == 6) {
                         controller.verifyOtp(
                           phoneNumber: widget.phoneNumber,
                           otp: otp,
                         );
                       } else {
-                        Get.snackbar(
-                          "Invalid OTP",
-                          "Please enter 6-digit OTP",
-                          backgroundColor: Colors.redAccent,
-                          colorText: Colors.white,
-                        );
+                        print("⚠️ Invalid OTP length: ${otp.length}");
                       }
                     },
                   ),
@@ -140,22 +193,59 @@ class _OtpPageState extends State<OtpPage> with CodeAutoFill {
                           onPressed: controller.isResending.value
                               ? null
                               : () async {
+                                  debugPrint("🔄 Resending OTP...");
+
+                                  // Resend OTP
                                   await controller.resendOtp(
                                     widget.phoneNumber,
                                   );
-                                  listenForCode(); // restart listener
+
+                                  // Restart SMS listener
+                                  await _restartListener();
                                 },
                           child: controller.isResending.value
-                              ? const CircularProgressIndicator()
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text(
                                   "Resend OTP",
                                   style: TextStyle(
                                     color: Colors.blueAccent,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 15,
                                   ),
                                 ),
                         );
                 }),
+
+                const SizedBox(height: 20),
+
+                // ✅ DEBUG: Test SMS Read (Remove in production)
+                if (const bool.fromEnvironment('dart.vm.product') == false)
+                  TextButton(
+                    onPressed: () async {
+                      debugPrint("🧪 Testing SMS read...");
+                      try {
+                        final code = await SmsAutoFill().code.first;
+                        debugPrint("📱 Fetched code: $code");
+                        if (code != null && code.isNotEmpty) {
+                          setState(() {
+                            otpController.text = code;
+                          });
+                        }
+                      } catch (e) {
+                        debugPrint("❌ Error fetching code: $e");
+                      }
+                    },
+                    child: const Text(
+                      "🧪 Test SMS Read (Debug)",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
               ],
             ),
           ),

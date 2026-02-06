@@ -6,6 +6,7 @@ import 'package:qlickcare/attendance/view/myleave.dart';
 import 'package:qlickcare/Home/navbar.dart';
 
 import 'package:qlickcare/Splash/splashscreen.dart';
+import 'package:qlickcare/meeting/view/meeting_list.dart';
 import 'package:qlickcare/onboarding/view/onboardingscreens.dart';
 import 'package:qlickcare/Home/homepage.dart';
 
@@ -29,6 +30,8 @@ class AppRoutes {
   static const String leaveAttendance = '/leaveAttendance';
   static const String settings = '/leave';
   static const String allPermission = '/all-permission';
+  static const String meetingList = '/meeting-list';
+
 
   static final pages = [
     GetPage(name: splash, page: () => SplashScreen()),
@@ -42,6 +45,8 @@ class AppRoutes {
     GetPage(name: payslipList, page: () => PayslipListView()),
     GetPage(name: leaveAttendance, page: () => Leaveandattendace()),
     GetPage(name: settings, page: () => LeaveManagementScreen()), // Placeholder
-    GetPage(name: allPermission, page: () => AllPermissionPage()),  
+    GetPage(name: allPermission, page: () => AllPermissionPage()), 
+    GetPage(name: meetingList, page: () => MeetingsPage()),
+     
   ];
 }

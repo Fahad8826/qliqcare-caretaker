@@ -91,15 +91,20 @@ class AppDrawer extends StatelessWidget {
                     CircleAvatar(
                       radius: w * 0.10,
                       backgroundColor: Colors.grey.shade300,
-                      child: CircleAvatar(
-                        radius: w * 0.093,
-                        backgroundImage:
-                            (profile?.profilePicture != null &&
-                                profile!.profilePicture!.trim().isNotEmpty)
-                            ? NetworkImage(profile!.profilePicture!.trim())
-                            : const AssetImage('assets/images/logo.png')
-                                  as ImageProvider,
-                      ),
+                      child:
+                          (profile?.profilePicture != null &&
+                              profile!.profilePicture!.trim().isNotEmpty)
+                          ? CircleAvatar(
+                              radius: w * 0.093,
+                              backgroundImage: NetworkImage(
+                                profile!.profilePicture!.trim(),
+                              ),
+                            )
+                          : Icon(
+                              FontAwesomeIcons.user,
+                              size: w * 0.10,
+                              color: Colors.grey.shade600,
+                            ),
                     ),
                   ],
                 ),
@@ -113,6 +118,13 @@ class AppDrawer extends StatelessWidget {
                 title: "All Patients Details",
                 onTap: () {
                   Get.toNamed('/bookingView');
+                },
+              ),
+              drawerItem(
+                icon: FontAwesomeIcons.calendar,
+                title: "My Meetings",
+                onTap: () {
+                  Get.toNamed('/meeting-list');
                 },
               ),
 
@@ -154,6 +166,7 @@ class AppDrawer extends StatelessWidget {
                   Get.toNamed('/all-permission');
                 },
               ),
+
               drawerItem(
                 icon: FontAwesomeIcons.fileLines,
                 title: "Privacy Policy",
