@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/bookings/model/bookingdetails_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -573,12 +574,11 @@ class BookingDetailsHelper {
         longitude == null ||
         latitude.isEmpty ||
         longitude.isEmpty) {
-      Get.snackbar(
+      showSnackbarSafe(
         "Location Error",
         "Location coordinates are not available",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error,
-        colorText: AppColors.background,
+    
+
       );
       return;
     }
@@ -591,21 +591,17 @@ class BookingDetailsHelper {
       if (await canLaunchUrl(googleMapsUrl)) {
         await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
       } else {
-        Get.snackbar(
+        showSnackbarSafe(
           "Error",
           "Could not open Google Maps",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
+
         );
       }
     } catch (e) {
-      Get.snackbar(
+      showSnackbarSafe(
         "Error",
         "Failed to open location: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error,
-        colorText: AppColors.background,
+        
       );
     }
   }

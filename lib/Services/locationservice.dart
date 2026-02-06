@@ -1,330 +1,189 @@
-
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:async';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:qlickcare/Services/locationpermisson.dart';
 
 import '../authentication/service/tokenservice.dart';
 
 class LocationService {
-  static const MethodChannel _channel = MethodChannel('com.qliq/location');
+  static const MethodChannel _channel =
+      MethodChannel('com.qliq/location');
 
   static final StreamController<Map<String, double>> _locationStream =
       StreamController.broadcast();
 
-  static bool _isHandlerRegistered = false;
+  static bool _initialized = false;
+  static bool _started = false;
+  /// -------------------------------
+  /// INIT
+  /// -------------------------------
+ static void initialize() {
+  if (_initialized) return;
+  debugPrint("📡 LocationService initialized");
+  _channel.setMethodCallHandler(_handleMethodCall);
+  _initialized = true;
+}
 
-  /// ----------------------------------------------------------
-  /// INITIALIZE METHOD CALL HANDLER (Call once in main.dart)
-  /// ----------------------------------------------------------
-  static void initialize() {
-    if (!_isHandlerRegistered) {
-      _channel.setMethodCallHandler(_handleMethodCall);
-      _isHandlerRegistered = true;
-      debugPrint("✅ Location method call handler registered");
-    }
-  }
+static Future<void> _handleMethodCall(MethodCall call) async {
+  debugPrint("📥 Native callback: ${call.method}");
 
-  /// Handle method calls from Kotlin
-  static Future<void> _handleMethodCall(MethodCall call) async {
-    if (call.method == "locationUpdate") {
-      try {
-        final lat = (call.arguments['latitude'] as num).toDouble();
-        final lng = (call.arguments['longitude'] as num).toDouble();
+  if (call.method != "locationUpdate") return;
 
-        debugPrint("📍 Background location received in Flutter: $lat, $lng");
+  final lat = (call.arguments['latitude'] as num).toDouble();
+  final lng = (call.arguments['longitude'] as num).toDouble();
 
-        // Round to 6 decimal places
-        final roundedLat = double.parse(lat.toStringAsFixed(6));
-        final roundedLng = double.parse(lng.toStringAsFixed(6));
+  debugPrint("📍 LOCATION UPDATE → lat=$lat lng=$lng");
 
-        // Add to stream for UI updates
-        _locationStream.add({
-          "lat": roundedLat,
-          "lng": roundedLng,
-        });
+  final data = {
+    "lat": double.parse(lat.toStringAsFixed(6)),
+    "lng": double.parse(lng.toStringAsFixed(6)),
+  };
 
-        // 🔥 NEW: Call API to update profile
-        await updateLocation(roundedLat, roundedLng);
+  _locationStream.add(data);
 
-      } catch (e) {
-        debugPrint("❌ Error parsing location update: $e");
-      }
-    }
-  }
+  debugPrint("📡 Sending location to API");
+  await updateLocation(data["lat"]!, data["lng"]!);
+}
 
-  /// ----------------------------------------------------------
-  /// REQUEST LOCATION PERMISSIONS
-  /// ----------------------------------------------------------
-  static Future<bool> requestLocationPermission() async {
-    debugPrint("🔐 Requesting location permissions...");
-
-    PermissionStatus status = await Permission.location.status;
-    debugPrint("📍 Current permission status: $status");
-
-    if (status.isGranted) {
-      debugPrint("✅ Location permission already granted");
-      return true;
-    }
-
-    if (status.isDenied) {
-      status = await Permission.location.request();
-
-      if (status.isGranted) {
-        debugPrint("✅ Location permission granted");
-        return true;
-      } else if (status.isPermanentlyDenied) {
-        debugPrint("❌ Location permission permanently denied");
-        await openAppSettings();
-        return false;
-      } else {
-        debugPrint("❌ Location permission denied");
-        return false;
-      }
-    }
-
-    if (status.isPermanentlyDenied) {
-      debugPrint("⚠️ Permission permanently denied. Opening settings...");
-      await openAppSettings();
-      return false;
-    }
-
-    return false;
-  }
-
-  /// ----------------------------------------------------------
-  /// REQUEST BACKGROUND LOCATION PERMISSION (Android 10+)
-  /// ----------------------------------------------------------
-  static Future<bool> requestBackgroundLocationPermission() async {
-    debugPrint("🔐 Requesting background location permission...");
-
-    bool foregroundGranted = await requestLocationPermission();
-    if (!foregroundGranted) {
-      debugPrint("❌ Foreground permission not granted");
-      return false;
-    }
-
-    PermissionStatus status = await Permission.locationAlways.status;
-    debugPrint("📍 Background permission status: $status");
-
-    if (status.isGranted) {
-      debugPrint("✅ Background location permission already granted");
-      return true;
-    }
-
-    if (status.isDenied) {
-      status = await Permission.locationAlways.request();
-
-      if (status.isGranted) {
-        debugPrint("✅ Background location permission granted");
-        return true;
-      } else if (status.isPermanentlyDenied) {
-        debugPrint("❌ Background permission permanently denied");
-        await openAppSettings();
-        return false;
-      } else {
-        debugPrint("❌ Background location permission denied");
-        return false;
-      }
-    }
-
-    return false;
-  }
-
-  /// ----------------------------------------------------------
-  /// GET CURRENT COORDINATES (WITH PERMISSION CHECK)
-  /// ----------------------------------------------------------
+  /// -------------------------------
+  /// CURRENT LOCATION
+  /// -------------------------------
   static Future<Map<String, double>?> getCurrentCoordinates() async {
-    try {
-      bool hasPermission = await requestLocationPermission();
+    final granted =
+        await LocationPermissionHandler.requestForeground();
 
-      if (!hasPermission) {
-        debugPrint("❌ Location permission not granted");
-        return null;
-      }
+    if (!granted) return null;
 
-      debugPrint("📍 Fetching current location...");
+    final location =
+        await _channel.invokeMethod<Map>('getLocation');
 
-      final location = await _channel.invokeMethod<Map>('getLocation');
+    if (location == null) return null;
 
-      if (location == null) {
-        debugPrint("❌ Location is null");
-        return null;
-      }
-
-      final double lat = (location["latitude"] as num).toDouble();
-      final double lng = (location["longitude"] as num).toDouble();
-
-      debugPrint("📍 Current coordinates: $lat, $lng");
-
-      final coords = {
-        "lat": double.parse(lat.toStringAsFixed(6)),
-        "lng": double.parse(lng.toStringAsFixed(6)),
-      };
-      _locationStream.add(coords);
-
-      return coords;
-    } catch (e) {
-      debugPrint("❌ Error fetching coordinates: $e");
-      return null;
-    }
+    return {
+      "lat": (location["latitude"] as num).toDouble(),
+      "lng": (location["longitude"] as num).toDouble(),
+    };
   }
 
-  /// ----------------------------------------------------------
-  /// START BACKGROUND LOCATION SERVICE
-  /// ----------------------------------------------------------
-  static Future<bool> startBackgroundLocation() async {
-    try {
-      initialize();
+  /// -------------------------------
+  /// START BACKGROUND
+  /// -------------------------------
+static Future<bool> startBackground(BuildContext context) async {
+  debugPrint("🚀 [LocationService] startBackground() invoked");
 
-      bool hasPermission = await requestBackgroundLocationPermission();
+  if (_started) {
+    debugPrint("♻️ [LocationService] Background service already running");
+    return true;
+  }
 
-      if (!hasPermission) {
-        debugPrint("❌ Background location permission not granted");
-        return false;
-      }
+  try {
+    debugPrint("⚙️ [LocationService] Initializing MethodChannel");
+    initialize();
 
-      final token = await TokenService.getAccessToken();
-      final baseUrl = dotenv.env['BASE_URL'];
+    // ---------- Foreground Permission ----------
+    debugPrint("📍 Requesting FOREGROUND permission...");
+    final fg = await LocationPermissionHandler.requestForeground();
+    debugPrint("📍 Foreground permission result: $fg");
 
-      if (token == null || baseUrl == null) {
-        debugPrint("❌ Token or Base URL missing");
-        return false;
-      }
-
-      await _channel.invokeMethod('startLocationService', {
-        'token': token,
-        'baseUrl': baseUrl,
-      });
-
-      debugPrint("✅ Background location service started");
-
-      return true;
-    } catch (e) {
-      debugPrint("❌ Error starting background location: $e");
+    if (!fg) {
+      debugPrint("❌ Foreground permission denied. Aborting start.");
       return false;
     }
-  }
 
-  /// ----------------------------------------------------------
-  /// STOP BACKGROUND LOCATION SERVICE
-  /// ----------------------------------------------------------
-  static Future<void> stopBackgroundLocation() async {
-    try {
-      await _channel.invokeMethod('stopLocationService');
-      debugPrint("🛑 Background location service stopped");
-    } catch (e) {
-      debugPrint("❌ Error stopping background location: $e");
+    // ---------- Background Permission ----------
+    debugPrint("🌍 Requesting BACKGROUND permission...");
+    final bg =
+        await LocationPermissionHandler.requestBackground(context);
+    debugPrint("🌍 Background permission result: $bg");
+
+    if (!bg) {
+      debugPrint("⚠️ Background permission denied. Aborting start.");
+      return false;
     }
-  }
 
-  /// ----------------------------------------------------------
-  /// UPDATE LOCATION TO API
-  /// ----------------------------------------------------------
-  static Future<void> updateLocation(double lat, double lng) async {
+    // ---------- Auth + Config ----------
+    debugPrint("🔐 Fetching auth token...");
     final token = await TokenService.getAccessToken();
+
+    debugPrint("🌐 Reading BASE_URL from env...");
     final baseUrl = dotenv.env['BASE_URL'];
-    
+
+    debugPrint("🔐 Token exists: ${token != null}");
+    debugPrint("🌐 Base URL value: $baseUrl");
+
     if (token == null || baseUrl == null) {
-      debugPrint("❌ Cannot update location: Missing token or baseUrl");
-      return;
+      debugPrint("❌ Missing token or BASE_URL. Cannot start service.");
+      return false;
     }
 
-    final url = Uri.parse("$baseUrl/api/caretaker/location-update/");
+    // ---------- Native Service Start ----------
+    debugPrint("📡 Invoking native startLocationService...");
 
-    try {
-      final roundedLat = double.parse(lat.toStringAsFixed(6));
-      final roundedLng = double.parse(lng.toStringAsFixed(6));
+    await _channel.invokeMethod('startLocationService', {
+      'token': token,
+      'baseUrl': baseUrl,
+    });
 
-      debugPrint("🌍 Sending location to API: $roundedLat, $roundedLng");
+    debugPrint("✅ Native location service started successfully");
 
-      final response = await http.patch(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: jsonEncode({"latitude": roundedLat, "longitude": roundedLng}),
-      ).timeout(const Duration(seconds: 10));
+    _started = true;
+    return true;
 
-      debugPrint("🌍 Update Status: ${response.statusCode}");
+  } catch (e, stack) {
+    debugPrint("❌ [LocationService] Failed to start background service");
+    debugPrint("❌ Error: $e");
+    debugPrint("❌ Stack: $stack");
+    return false;
+  }
+}
 
-      if (response.statusCode == 200) {
-        debugPrint("✅ Location updated successfully");
-        debugPrint("📦 Response: ${response.body}");
-      } else {
-        debugPrint("⚠️ Location update failed: ${response.statusCode}");
-        debugPrint("📦 Response: ${response.body}");
-      }
-    } on TimeoutException {
-      debugPrint("❌ Location update timed out");
-    } catch (e) {
-      debugPrint("❌ Error updating location: $e");
-    }
+  static Future<void> stopBackground() async {
+    await _channel.invokeMethod('stopLocationService');
   }
 
-  /// ----------------------------------------------------------
-  /// CHECK IF PERMISSIONS ARE GRANTED
-  /// ----------------------------------------------------------
-  static Future<bool> hasLocationPermission() async {
-    return await Permission.location.isGranted;
+  /// -------------------------------
+  /// API UPDATE
+  /// -------------------------------
+ static Future<void> updateLocation(double lat, double lng) async {
+  final token = await TokenService.getAccessToken();
+  final baseUrl = dotenv.env['BASE_URL'];
+
+  final url =
+      Uri.parse("$baseUrl/api/caretaker/location-update/");
+
+  debugPrint("🌍 POST $url");
+  debugPrint("📦 Payload: lat=$lat lng=$lng");
+
+  final res = await http.post(
+    url,
+    headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    },
+    body: jsonEncode({
+      "latitude": lat,
+      "longitude": lng,
+    }),
+  );
+
+  debugPrint("📨 API response: ${res.statusCode}");
+}
+
+  /// -------------------------------
+  /// LOCATION NAME
+  /// -------------------------------
+  static Future<String> getLocationName(
+      double lat, double lng) async {
+    final places =
+        await placemarkFromCoordinates(lat, lng);
+    if (places.isEmpty) return "Unknown";
+    return "${places.first.locality}, ${places.first.administrativeArea}";
   }
 
-  static Future<bool> hasBackgroundLocationPermission() async {
-    return await Permission.locationAlways.isGranted;
-  }
-
-  /// ----------------------------------------------------------
-  /// GET LOCATION NAME FROM COORDINATES
-  /// ----------------------------------------------------------
-  static Future<String> getLocationName(double lat, double lng) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-
-        List<String> locationParts = [];
-
-        if (place.locality != null && place.locality!.isNotEmpty) {
-          locationParts.add(place.locality!);
-        }
-        if (place.administrativeArea != null &&
-            place.administrativeArea!.isNotEmpty) {
-          locationParts.add(place.administrativeArea!);
-        }
-
-        String locationName = locationParts.isNotEmpty
-            ? locationParts.join(', ')
-            : 'Unknown Location';
-
-        debugPrint("📍 Location name: $locationName");
-        return locationName;
-      }
-
-      return 'Unknown Location';
-    } catch (e) {
-      debugPrint("❌ Error getting location name: $e");
-      return 'Location unavailable';
-    }
-  }
-
-  /// ----------------------------------------------------------
-  /// LOCATION STREAM
-  /// ----------------------------------------------------------
-  static Stream<Map<String, double>> get locationStream =>
+  static Stream<Map<String, double>> get stream =>
       _locationStream.stream;
-
-  /// ----------------------------------------------------------
-  /// DISPOSE (Call when logging out)
-  /// ----------------------------------------------------------
-  static void dispose() {
-    if (!_locationStream.isClosed) {
-      _locationStream.close();
-    }
-  }
 }

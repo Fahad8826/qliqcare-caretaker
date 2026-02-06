@@ -44,7 +44,7 @@ class _LeaveandattendaceState extends State<Leaveandattendace> {
             color: Colors.white,
             size: isPortrait ? size.width * 0.06 : size.height * 0.06,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       body: SingleChildScrollView(

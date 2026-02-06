@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:qlickcare/Services/whtasapp_service.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/profile/controller/profilecontroller.dart';
 import 'package:qlickcare/authentication/view/logoutdailoge.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
@@ -166,7 +167,7 @@ class AppDrawer extends StatelessWidget {
                       mode: LaunchMode.externalApplication,
                     );
                   } else {
-                    Get.snackbar('Error', 'Could not launch Privacy Policy');
+                    showSnackbarSafe('Error', 'Could not launch Privacy Policy');
                   }
                 },
               ),

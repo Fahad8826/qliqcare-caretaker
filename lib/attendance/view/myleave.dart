@@ -120,7 +120,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             color: Colors.white,
             size: isPortrait ? size.width * 0.06 : size.height * 0.06,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(

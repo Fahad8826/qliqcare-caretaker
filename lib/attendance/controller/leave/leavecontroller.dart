@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/attendance/model/leave/leave_model.dart';
 import 'package:qlickcare/attendance/model/leave/leavestats_model.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
@@ -79,12 +80,12 @@ class LeaveController extends GetxController {
         debugPrint("✅ Fetched ${leaveRequests.length} leave requests");
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar("Error", _extractMessage(data));
+        showSnackbarSafe("Error", _extractMessage(data));
       }
     } catch (e, s) {
       debugPrint("❌ FETCH error: $e");
       debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Failed to fetch leave requests");
+      showSnackbarSafe("Error", "Failed to fetch leave requests");
     } finally {
       isLoading.value = false;
     }
@@ -116,12 +117,12 @@ class LeaveController extends GetxController {
         debugPrint("✅ Leave stats fetched successfully");
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar("Error", _extractMessage(data));
+        showSnackbarSafe("Error", _extractMessage(data));
       }
     } catch (e, s) {
       debugPrint("❌ STATS error: $e");
       debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Failed to fetch leave stats");
+      showSnackbarSafe("Error", "Failed to fetch leave stats");
     } finally {
       isStatsLoading.value = false;
     }
@@ -162,10 +163,10 @@ class LeaveController extends GetxController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        Get.snackbar(
+        showSnackbarSafe(
           "Success",
           data["message"] ?? "Leave request submitted successfully",
-          snackPosition: SnackPosition.BOTTOM,
+          
         );
         
         // Refresh data
@@ -175,13 +176,13 @@ class LeaveController extends GetxController {
         debugPrint("✅ Leave request submitted");
         return true;
       } else {
-        Get.snackbar("Error", _extractMessage(data));
+        showSnackbarSafe("Error", _extractMessage(data));
         return false;
       }
     } catch (e, s) {
       debugPrint("❌ REQUEST error: $e");
       debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Failed to submit leave request");
+      showSnackbarSafe("Error", "Failed to submit leave request");
       return false;
     } finally {
       isLoading.value = false;
@@ -224,10 +225,10 @@ class LeaveController extends GetxController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        Get.snackbar(
+        showSnackbarSafe(
           "Success",
           data["message"] ?? "Leave request updated successfully",
-          snackPosition: SnackPosition.BOTTOM,
+        
         );
         
         // Refresh data
@@ -237,13 +238,13 @@ class LeaveController extends GetxController {
         debugPrint("✅ Leave request updated");
         return true;
       } else {
-        Get.snackbar("Error", _extractMessage(data));
+        showSnackbarSafe("Error", _extractMessage(data));
         return false;
       }
     } catch (e, s) {
       debugPrint("❌ UPDATE error: $e");
       debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Failed to update leave request");
+      showSnackbarSafe("Error", "Failed to update leave request");
       return false;
     } finally {
       isLoading.value = false;
@@ -271,10 +272,10 @@ class LeaveController extends GetxController {
       debugPrint("📦 DELETE response: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        Get.snackbar(
+        showSnackbarSafe(
           "Success",
           "Leave request deleted successfully",
-          snackPosition: SnackPosition.BOTTOM,
+          
         );
         
         // Refresh data
@@ -285,13 +286,13 @@ class LeaveController extends GetxController {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar("Error", _extractMessage(data));
+        showSnackbarSafe("Error", _extractMessage(data));
         return false;
       }
     } catch (e, s) {
       debugPrint("❌ DELETE error: $e");
       debugPrintStack(stackTrace: s);
-      Get.snackbar("Error", "Failed to delete leave request");
+      showSnackbarSafe("Error", "Failed to delete leave request");
       return false;
     } finally {
       isLoading.value = false;

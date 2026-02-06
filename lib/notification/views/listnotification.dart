@@ -18,7 +18,7 @@ class notification extends StatelessWidget {
         title: "Notifications",
         leading: IconButton(
           icon: const Icon(FontAwesomeIcons.arrowLeft, color: Colors.white),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       backgroundColor: AppColors.screenBackground,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/profile/model/deleteaccount_model.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 import 'package:qlickcare/authentication/view/login.dart';
@@ -34,7 +35,7 @@ class AccountController extends GetxController {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      Get.snackbar(
+      showSnackbarSafe(
         "Success",
         data["message"] ?? "Account deleted",
       );
@@ -44,10 +45,10 @@ class AccountController extends GetxController {
         Get.offAll(() => LoginView());
       });
     } else {
-      Get.snackbar("Error", response.body);
+      showSnackbarSafe("Error", response.body);
     }
   } catch (e) {
-    Get.snackbar("Exception", e.toString());
+    showSnackbarSafe("Exception", e.toString());
   } finally {
     isDeleting.value = false;
   }

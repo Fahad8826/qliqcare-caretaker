@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/chat/service/callpermisson.dart';
 
 class AllPermissionPage extends StatefulWidget {
@@ -28,7 +29,8 @@ class _AllPermissionPageState extends State<AllPermissionPage> {
   Future<void> _loadStatuses() async {
     camera = await Permission.camera.isGranted;
     mic = await Permission.microphone.isGranted;
-    location = await Permission.locationAlways.isGranted ||
+    location =
+        await Permission.locationAlways.isGranted ||
         await Permission.locationWhenInUse.isGranted;
     notification = await Permission.notification.isGranted;
 
@@ -111,22 +113,28 @@ class _AllPermissionPageState extends State<AllPermissionPage> {
     }
   }
 
-  Future<void> _requestAll() async {
-    final granted = await AppPermissions.requestAll();
+Future<void> _requestAll() async {
+  final granted = await AppPermissions.requestAll();
 
-    if (granted) {
-      Get.offAllNamed('/MainHome');
-    } else {
-      _loadStatuses();
-      Get.snackbar(
-        "Permissions required",
-        "Please allow all permissions to continue",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    }
+  if (!mounted) return;
+
+  if (granted) {
+    Get.offAllNamed('/MainHome');
+    return;
   }
 
+  await _loadStatuses();
+
+  // ⭐ Wait one frame for overlay rebuild
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!mounted) return;
+
+    showSnackbarSafe(
+      "Permissions required",
+      "Please allow all permissions to continue",
+    );
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,7 +147,7 @@ class _AllPermissionPageState extends State<AllPermissionPage> {
             color: Colors.white,
             size: 20,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       body: SingleChildScrollView(
@@ -235,17 +243,13 @@ class _AllPermissionPageState extends State<AllPermissionPage> {
               height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      allGranted ? AppColors.primary : Colors.grey,
+                  backgroundColor: allGranted ? AppColors.primary : Colors.grey,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 onPressed: _requestAll,
-                child: Text(
-                  "Continue",
-                  style: AppTextStyles.button,
-                ),
+                child: Text("Continue", style: AppTextStyles.button),
               ),
             ),
           ],
@@ -296,11 +300,7 @@ class _PermissionCard extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 24,
-            ),
+            child: Icon(icon, color: AppColors.primary, size: 24),
           ),
 
           const SizedBox(width: 14),

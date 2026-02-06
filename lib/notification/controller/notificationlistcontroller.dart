@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/notification/model/notificationlist_model.dart';
 
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
@@ -44,7 +45,7 @@ class NotificationController extends GetxController {
           .toList();
     }
   } catch (_) {
-    Get.snackbar("Error", "Session expired");
+    showSnackbarSafe("Error", "Session expired");
   } finally {
     isLoading.value = false;
   }

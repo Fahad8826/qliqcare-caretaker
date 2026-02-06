@@ -82,7 +82,7 @@ void confirmLogout(BuildContext context) {
                   ),
                   onPressed: logoutController.isLoading.value
                       ? null
-                      : () => Get.back(),
+                      : () => Get.back(closeOverlays: true),
                   child: Text(
                     "Cancel",
                     style: AppTextStyles.body.copyWith(

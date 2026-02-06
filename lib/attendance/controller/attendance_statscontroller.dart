@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/attendance/model/attendencestatus_model.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 import 'package:qlickcare/authentication/service/tokenservice.dart';
@@ -39,10 +40,10 @@ class AttendanceStatsController extends GetxController {
         final data = jsonDecode(response.body);
         stats.value = AttendanceStats.fromJson(data);
       } else {
-        Get.snackbar("Error", "Failed to load stats");
+        showSnackbarSafe("Error", "Failed to load stats");
       }
     } catch (e) {
-      Get.snackbar("Error", "Server error");
+      showSnackbarSafe("Error", "Server error");
     } finally {
       isLoading.value = false;
     }

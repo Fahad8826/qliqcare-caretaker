@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/bookings/controller/bookingcontroller.dart';
 import 'package:qlickcare/bookings/view/Details/bookingdetailedview.dart';
 import 'package:qlickcare/chat/controller/chat_controller.dart';
@@ -45,10 +46,11 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       print("⚠️ Bookings empty, fetching...");
       ongoingBookingController.fetchOngoingBookings();
     }
-    
-    // Load location in background (non-blocking)
-    _fetchLocationName();
+  _fetchLocationName();
   }
+
+
+
 
   String getGreeting() {
     final hour = DateTime.now().hour;
@@ -155,8 +157,8 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   Widget _buildProfileCard() {
     return Obx(() {
       final profile = profileController.profile.value;
-      final fullName = profile?.fullName ?? "User";
-      final profilePicture = profile?.profilePicture;
+      final fullName = profile.fullName ?? "User";
+      final profilePicture = profile.profilePicture;
 
       return Container(
         margin: const EdgeInsets.all(16),
@@ -660,7 +662,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     final chatId = chatController.getChatIdByBooking(bookingId);
     
     if (chatId == null) {
-      Get.snackbar(
+      showSnackbarSafe(
         "Chat Not Available",
         "No chat room found for this booking",
         snackPosition: SnackPosition.BOTTOM,

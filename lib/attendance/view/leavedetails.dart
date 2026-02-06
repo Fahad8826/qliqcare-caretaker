@@ -39,7 +39,7 @@ class _LeaveDetailPageState extends State<LeaveDetailPage> {
             color: Colors.white,
             size: isPortrait ? size.width * 0.06 : size.height * 0.06,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
         actions: [
           if (!isEditMode && _canEdit())
@@ -355,7 +355,7 @@ class _LeaveDetailPageState extends State<LeaveDetailPage> {
             ),
             onSuccess: () {
               setState(() => isEditMode = false);
-              Get.back();
+              Get.back(closeOverlays: true);
             },
           ),
           SizedBox(height: size.height * 0.02),
@@ -391,7 +391,7 @@ class _LeaveDetailPageState extends State<LeaveDetailPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Get.back(closeOverlays: true),
             child: Text(
               "No, Keep It",
               style: TextStyle(color: AppColors.textSecondary),
@@ -399,10 +399,10 @@ class _LeaveDetailPageState extends State<LeaveDetailPage> {
           ),
           TextButton(
             onPressed: () async {
-              Get.back();
+              Get.back(closeOverlays: true);
               final success = await controller.deleteLeaveRequest(widget.leaveRequest.id);
               if (success) {
-                Get.back();
+                Get.back(closeOverlays: true);
               }
             },
             child: Text(

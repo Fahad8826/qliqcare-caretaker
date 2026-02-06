@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/attendance/controller/leave/leavecontroller.dart';
 import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/Utils/loading.dart';
@@ -87,17 +88,17 @@ class _LeaveRequestWidgetState extends State<LeaveRequestWidget> {
 
   Future<void> _submit() async {
   if (selectedRange == null) {
-    Get.snackbar("Error", "Please select leave dates");
+    showSnackbarSafe("Error", "Please select leave dates");
     return;
   }
 
   if (reasonController.text.trim().isEmpty) {
-    Get.snackbar("Error", "Please enter leave reason");
+    showSnackbarSafe("Error", "Please enter leave reason");
     return;
   }
 
   if (widget.isEdit && widget.leaveId == null) {
-    Get.snackbar("Error", "Invalid leave record");
+    showSnackbarSafe("Error", "Invalid leave record");
     return;
   }
 

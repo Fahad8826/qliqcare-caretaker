@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WhatsAppLauncherController extends GetxController {
@@ -12,7 +13,7 @@ class WhatsAppLauncherController extends GetxController {
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar("Error", "WhatsApp is not installed!");
+      showSnackbarSafe("Error", "WhatsApp is not installed!");
     }
   }
 }

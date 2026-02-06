@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 import 'package:qlickcare/authentication/controller/otpcontroller.dart';
@@ -19,33 +21,20 @@ class _OtpPageState extends State<OtpPage> with CodeAutoFill {
   final TextEditingController otpController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    listenForCode();
-    
-    SmsAutoFill().getAppSignature.then((signature) {
-    debugPrint("🔑 APP HASH: $signature");
-  }); 
-  }
-
-  /// ✅ Called automatically when SMS arrives
-  @override
   void codeUpdated() {
     if (code == null) return;
 
-    print("📩 OTP received: $code");
-
     otpController.text = code!;
-
     controller.verifyOtp(
       phoneNumber: widget.phoneNumber,
       otp: code!,
+      context: context,
     );
   }
 
   @override
   void dispose() {
-    cancel(); // ✅ Stop listener
+    cancel();
     otpController.dispose();
     super.dispose();
   }
@@ -58,106 +47,96 @@ class _OtpPageState extends State<OtpPage> with CodeAutoFill {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: size.width * 0.08,
-              vertical: size.height * 0.05,
-            ),
-            child: Column(
-              children: [
-                Image.asset('assets/images/logo.png', height: 90),
-                const SizedBox(height: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: size.width * 0.08,
+            vertical: size.height * 0.05,
+          ),
+          child: Column(
+            children: [
+              Image.asset('assets/images/logo.png', height: 90),
+              const SizedBox(height: 20),
 
-                const Text(
-                  "Confirm it's you",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              const Text(
+                "Confirm it's you",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                "Enter the OTP sent to\n+91 XX-XXX-${widget.phoneNumber.substring(6)}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
+
+              const SizedBox(height: 30),
+
+              PinFieldAutoFill(
+                controller: otpController,
+                codeLength: 6,
+                decoration: UnderlineDecoration(
+                  colorBuilder: FixedColorBuilder(AppColors.primary),
                 ),
-                const SizedBox(height: 10),
+                onCodeSubmitted: (otp) {
+                  controller.verifyOtp(
+                    phoneNumber: widget.phoneNumber,
+                    otp: otp,
+                    context: context,
+                  );
+                },
+              ),
 
-                Text(
-                  "Enter the OTP sent to\n+91 XX-XXX-${widget.phoneNumber.substring(6)}",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
+              const SizedBox(height: 35),
 
-                const SizedBox(height: 30),
+              Obx(
+                () => CommonButton(
+                  text: "Continue",
+                  isLoading: controller.isLoading.value,
+                  onPressed: () {
+                    final otp = otpController.text.trim();
+                    if (otp.length != 6) {
+                      showSnackbarSafe(
+                        "Invalid OTP",
+                        "Please enter 6-digit OTP",
+                      );
+                      return;
+                    }
 
-                /// ✅ OTP INPUT (auto-filled safely)
-                PinFieldAutoFill(
-                  controller: otpController,
-                  codeLength: 6,
-                  decoration: UnderlineDecoration(
-                    colorBuilder: FixedColorBuilder(AppColors.primary),
-                  ),
-                  onCodeSubmitted: (otp) {
                     controller.verifyOtp(
                       phoneNumber: widget.phoneNumber,
                       otp: otp,
+                      context: context,
                     );
                   },
                 ),
+              ),
 
-                const SizedBox(height: 35),
+              const SizedBox(height: 20),
 
-                /// CONTINUE BUTTON
-                Obx(
-                  () => CommonButton(
-                    text: "Continue",
-                    isLoading: controller.isLoading.value,
-                    onPressed: () {
-                      final otp = otpController.text;
-                      if (otp.length == 6) {
-                        controller.verifyOtp(
-                          phoneNumber: widget.phoneNumber,
-                          otp: otp,
-                        );
-                      } else {
-                        Get.snackbar(
-                          "Invalid OTP",
-                          "Please enter 6-digit OTP",
-                          backgroundColor: Colors.redAccent,
-                          colorText: Colors.white,
-                        );
-                      }
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                /// RESEND OTP
-                Obx(() {
-                  return controller.secondsRemaining.value > 0
-                      ? Text(
-                          "Resend Code in ${controller.secondsRemaining.value} Sec",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: controller.isResending.value
-                              ? null
-                              : () async {
-                                  await controller.resendOtp(
-                                    widget.phoneNumber,
-                                  );
-                                  listenForCode(); // restart listener
-                                },
-                          child: controller.isResending.value
-                              ? const CircularProgressIndicator()
-                              : const Text(
-                                  "Resend OTP",
-                                  style: TextStyle(
-                                    color: Colors.blueAccent,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+              Obx(() {
+                return controller.secondsRemaining.value > 0
+                    ? Text(
+                        "Resend Code in ${controller.secondsRemaining.value} Sec",
+                        style: const TextStyle(color: Colors.grey),
+                      )
+                    : TextButton(
+                        onPressed: controller.isResending.value
+                            ? null
+                            : () async {
+                                await controller.resendOtp(widget.phoneNumber);
+                                listenForCode();
+                              },
+                        child: controller.isResending.value
+                            ? const CircularProgressIndicator()
+                            : const Text(
+                                "Resend OTP",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                        );
-                }),
-              ],
-            ),
+                              ),
+                      );
+              }),
+            ],
           ),
         ),
       ),

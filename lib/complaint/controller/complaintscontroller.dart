@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 
 import '../model/complain_model.dart';
@@ -39,11 +40,11 @@ Future<void> submitComplaint({
     });
 
     if (response.statusCode == 201) {
-      Get.snackbar("Success", "Complaint submitted");
+      showSnackbarSafe("Success", "Complaint submitted");
       fetchMyComplaints();
     } else {
       debugPrint("Submit Error: ${response.body}");
-      Get.snackbar("Error", "Failed to submit complaint");
+      showSnackbarSafe("Error", "Failed to submit complaint");
     }
   } finally {
     isLoading.value = false;

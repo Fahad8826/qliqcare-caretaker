@@ -37,7 +37,7 @@ class BookingView extends StatelessWidget {
             ),
             onPressed: () {
               Get.delete<BookingController>(tag: 'allbookings');
-              Get.back();
+              Get.back(closeOverlays: true);
             },
           ),
         ),

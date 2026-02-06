@@ -5,14 +5,30 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/authentication/view/otp.dart';
 
 import 'package:url_launcher/url_launcher.dart';
+
 
 class LoginController extends GetxController {
   final phoneController = TextEditingController();
   final isLoading = false.obs;
   final baseUrl = dotenv.env['BASE_URL'] ?? '';
+
+  /// ✅ Safe snackbar wrapper
+  void showSnackbar(String title, String message,
+      {Color bg = Colors.redAccent,
+      SnackPosition pos = SnackPosition.BOTTOM,
+      int durationSec = 3}) {
+    
+      showSnackbarSafe(
+        title,
+        message,
+        
+      );
+  
+  }
 
   void login() async {
     final phone = phoneController.text.trim();
@@ -20,13 +36,7 @@ class LoginController extends GetxController {
     if (phone.isEmpty ||
         phone.length != 10 ||
         !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      Get.snackbar(
-        "Invalid Number",
-        "Please enter a valid 10-digit phone number",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      showSnackbar("Invalid Number", "Please enter a valid 10-digit phone number");
       return;
     }
 
@@ -52,72 +62,36 @@ class LoginController extends GetxController {
         final result = await response.stream.bytesToString();
         print("✅ OTP Sent Successfully: $result");
 
-        Get.snackbar(
-          "OTP Sent",
-          "Your OTP is: $result",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.black87,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 5),
-        );
+        showSnackbar("OTP Sent", "Your OTP is: $result", bg: Colors.black87, durationSec: 5);
 
-        // Navigate to OTP screen
-        Get.to(() => OtpPage(phoneNumber: phone));
+        // Navigate to OTP screen safely
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.to(() => OtpPage(phoneNumber: phone));
+        });
+
         return;
       }
 
       final errorBody = await response.stream.bytesToString();
       print("❌ Server Error (${response.statusCode}): $errorBody");
 
-      Get.snackbar(
-        "Server Error",
-        "Failed to send OTP. Please try again later.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    }
-    // --- Exception handling remains the same ---
-    on SocketException catch (_) {
+      showSnackbar("Server Error", "Failed to send OTP. Please try again later.");
+    } on SocketException {
       isLoading.value = false;
-      Get.snackbar(
-        "No Internet",
-        "Check your internet connection and try again.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    } on TimeoutException catch (_) {
+      showSnackbar("No Internet", "Check your internet connection and try again.");
+    } on TimeoutException {
       isLoading.value = false;
-      Get.snackbar(
-        "Timeout",
-        "Server is taking too long to respond. Try again.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    } on FormatException catch (e) {
+      showSnackbar("Timeout", "Server is taking too long to respond. Try again.");
+    } on FormatException {
       isLoading.value = false;
-      Get.snackbar(
-        "Format Error",
-        "Unexpected response from server.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      showSnackbar("Format Error", "Unexpected response from server.");
     } catch (e) {
       isLoading.value = false;
-      Get.snackbar(
-        "Error",
-        "Something went wrong: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      showSnackbar("Error", "Something went wrong: $e");
     }
   }
 
-  // // ===================== REGISTER PAGE OPEN =====================
+  // ===================== REGISTER PAGE OPEN =====================
   Future<void> openRegisterPage() async {
     final url = "$baseUrl/api/caretaker/register-page/";
 
@@ -127,24 +101,10 @@ class LoginController extends GetxController {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        Get.snackbar(
-          "Error",
-          "Could not open the registration page.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
-        );
+        showSnackbar("Error", "Could not open the registration page.");
       }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to open the register page: $e",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      showSnackbar("Error", "Failed to open the register page: $e");
     }
   }
-
-  
 }

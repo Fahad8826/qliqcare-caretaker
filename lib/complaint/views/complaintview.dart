@@ -28,7 +28,7 @@ class ComplaintDetailPage extends StatelessWidget {
             color: Colors.white,
             size: 20,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       body: Obx(() {

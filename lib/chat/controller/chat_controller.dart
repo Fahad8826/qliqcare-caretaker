@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 import 'package:qlickcare/authentication/service/tokenservice.dart';
 import 'package:qlickcare/chat/model/chat_model.dart';
@@ -438,7 +439,7 @@ class ChatController extends GetxController {
         _wsService.sendMessage(content);
       } else {
         print('❌ WebSocket not connected');
-        Get.snackbar(
+        showSnackbarSafe(
           'Connection Error',
           'WebSocket is not connected. Please check your connection.',
           snackPosition: SnackPosition.BOTTOM,
@@ -446,7 +447,7 @@ class ChatController extends GetxController {
       }
     } catch (e) {
       print('🔥 sendMessage error: $e');
-      Get.snackbar(
+      showSnackbarSafe(
         'Error',
         'Failed to send message',
         snackPosition: SnackPosition.BOTTOM,
@@ -498,7 +499,7 @@ class ChatController extends GetxController {
       print('🔥 sendFileMessage error: $e');
       messages.removeWhere((m) => m.id == DateTime.now().millisecondsSinceEpoch);
 
-      Get.snackbar(
+      showSnackbarSafe(
         'Error',
         'Failed to send file: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,

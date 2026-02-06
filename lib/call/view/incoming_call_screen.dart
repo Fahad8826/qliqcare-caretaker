@@ -92,7 +92,7 @@
 //                         color: Colors.red,
 //                         onPressed: () {
 //                           callController.declineCall();
-//                           Get.back(); // Close dialog
+//                           Get.back(closeOverlays: true); // Close dialog
 //                         },
 //                       ),
 //                       // Accept button
@@ -103,7 +103,7 @@
 //                         label: 'Accept',
 //                         color: Colors.green,
 //                         onPressed: () async {
-//                           Get.back(); // Close dialog
+//                           Get.back(closeOverlays: true); // Close dialog
 //                           await callController.acceptCall();
 //                           Get.to(() => CallScreen());
 //                         },

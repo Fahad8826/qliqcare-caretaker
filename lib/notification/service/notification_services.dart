@@ -1,3 +1,220 @@
+// import 'dart:convert';
+// import 'dart:io';
+
+// import 'package:firebase_messaging/firebase_messaging.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:http/http.dart' as http;
+
+// import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
+// import 'package:qlickcare/call/service/call_fcm_handler.dart';
+
+// import '../../main.dart';
+
+// class NotificationService {
+//   static final NotificationService _instance =
+//       NotificationService._internal();
+//   factory NotificationService() => _instance;
+//   NotificationService._internal();
+
+//   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+//   final String baseUrl = dotenv.env['BASE_URL'] ?? '';
+
+//   /* ==========================================================
+//    * INIT
+//    * ========================================================== */
+//   Future<void> initialize() async {
+//     await _requestPermission();
+//     await _getAndRegisterToken();
+//     _listenTokenRefresh();
+//     _setupListeners();
+//   }
+
+//   /* ==========================================================
+//    * PERMISSIONS
+//    * ========================================================== */
+//   Future<void> _requestPermission() async {
+//     final settings = await _fcm.requestPermission(
+//       alert: true,
+//       badge: true,
+//       sound: true,
+//     );
+
+//     print("🔐 FCM Permission: ${settings.authorizationStatus}");
+//   }
+
+//   /* ==========================================================
+//    * TOKEN
+//    * ========================================================== */
+//  Future<void> _getAndRegisterToken() async {
+//   try {
+//     if (Platform.isIOS) {
+//       // 🔥 WAIT for APNS token
+//       final apnsToken = await _fcm.getAPNSToken();
+//       if (apnsToken == null) {
+//         print('⏳ APNS token not ready yet, retrying...');
+//         return; // DO NOT crash
+//       }
+//       print('🍎 APNS Token: $apnsToken');
+//     }
+
+//     final fcmToken = await _fcm.getToken();
+//     print("📱 FCM Token: $fcmToken");
+
+//     if (fcmToken != null) {
+//       await registerTokenToBackend(fcmToken);
+//     }
+//   } catch (e) {
+//     print('❌ FCM token error: $e');
+//   }
+// }
+
+//   void _listenTokenRefresh() {
+//     _fcm.onTokenRefresh.listen((newToken) async {
+//       print("♻️ Token refreshed: $newToken");
+//       await registerTokenToBackend(newToken);
+//     });
+//   }
+
+//   /* ==========================================================
+//    * BACKEND REGISTRATION
+//    * ========================================================== */
+//   Future<void> registerTokenToBackend(String fcmToken) async {
+//     try {
+//       await ApiService.request((accessToken) async {
+//         final url = Uri.parse('$baseUrl/api/caretaker/register-token/');
+//         return http.post(
+//           url,
+//           headers: {
+//             "Content-Type": "application/json",
+//             "Authorization": "Bearer $accessToken",
+//           },
+//           body: jsonEncode({
+//             "token": fcmToken,
+//             "device_type": Platform.isAndroid ? "android" : "ios",
+//           }),
+//         );
+//       });
+
+//       print("✅ FCM token registered");
+//     } catch (e) {
+//       print("❌ Token registration failed: $e");
+//     }
+//   }
+
+//   /* ==========================================================
+//    * LISTENERS
+//    * ========================================================== */
+//   void _setupListeners() {
+//     FirebaseMessaging.onMessage.listen((message) {
+//       print('🟢 FCM FOREGROUND RECEIVED');
+//       print('🟢 DATA => ${message.data}');
+//       print('🟢 NOTIFICATION => ${message.notification?.title}');
+
+//       _showLocalNotification(message);
+//     });
+
+//     FirebaseMessaging.onMessageOpenedApp.listen((message) {
+//       print('🚀 Notification tapped');
+//       // if (message.data['type'] == 'incoming_call') {
+//       //   handleIncomingCallFCM(message.data);
+//       // }
+//     });
+//   }
+
+//   /* ==========================================================
+//    * LOCAL NOTIFICATIONS INIT (ANDROID + iOS)
+//    * ========================================================== */
+//   Future<void> initLocalNotifications() async {
+//     const androidInit =
+//         AndroidInitializationSettings('@mipmap/ic_notification');
+
+//     const iosInit = DarwinInitializationSettings(
+//       requestAlertPermission: true,
+//       requestBadgePermission: true,
+//       requestSoundPermission: true,
+//     );
+
+//     const initSettings = InitializationSettings(
+//       android: androidInit,
+//       iOS: iosInit,
+//     );
+
+//     await flutterLocalNotificationsPlugin.initialize(
+//       initSettings,
+//       onDidReceiveNotificationResponse: (response) {
+//         print('🔔 Notification tapped: ${response.payload}');
+//       },
+//     );
+
+//     if (Platform.isAndroid) {
+//       const highImportanceChannel = AndroidNotificationChannel(
+//         'high_importance_channel',
+//         'High Importance Notifications',
+//         importance: Importance.high,
+//       );
+
+//       const callChannel = AndroidNotificationChannel(
+//         'call_channel',
+//         'Incoming Calls',
+//         description: 'Notifications for incoming calls',
+//         importance: Importance.max,
+//         playSound: true,
+//         enableVibration: true,
+//       );
+
+//       final androidPlugin = flutterLocalNotificationsPlugin
+//           .resolvePlatformSpecificImplementation<
+//               AndroidFlutterLocalNotificationsPlugin>();
+
+//       await androidPlugin?.createNotificationChannel(highImportanceChannel);
+//       await androidPlugin?.createNotificationChannel(callChannel);
+//     }
+//   }
+
+//   /* ==========================================================
+//    * SHOW LOCAL NOTIFICATION
+//    * ========================================================== */
+//   void _showLocalNotification(RemoteMessage message) {
+//     if (message.notification == null) return;
+
+//     final androidDetails = AndroidNotificationDetails(
+//       'high_importance_channel',
+//       'High Importance Notifications',
+//       importance: Importance.high,
+//       priority: Priority.high,
+//     );
+
+//     const iosDetails = DarwinNotificationDetails(
+//       presentAlert: true,
+//       presentBadge: true,
+//       presentSound: true,
+//     );
+
+//     final details = NotificationDetails(
+//       android: androidDetails,
+//       iOS: iosDetails,
+//     );
+
+//     flutterLocalNotificationsPlugin.show(
+//       message.hashCode,
+//       message.notification!.title,
+//       message.notification!.body,
+//       details,
+//       payload: jsonEncode(message.data),
+//     );
+//   }
+
+//   /* ==========================================================
+//    * LOGOUT CLEANUP
+//    * ========================================================== */
+//   Future<void> deleteToken() async {
+//     await _fcm.deleteToken();
+//     print("🗑️ FCM token deleted");
+//   }
+// }
+
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,6 +222,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 import 'package:qlickcare/call/service/call_fcm_handler.dart';
 
@@ -19,9 +237,9 @@ class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final String baseUrl = dotenv.env['BASE_URL'] ?? '';
 
-  /// ----------------------------------------------------------
-  /// INIT
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * INIT
+   * ========================================================== */
   Future<void> initialize() async {
     await _requestPermission();
     await _getAndRegisterToken();
@@ -29,9 +247,9 @@ class NotificationService {
     _setupListeners();
   }
 
-  /// ----------------------------------------------------------
-  /// PERMISSION
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * PERMISSIONS
+   * ========================================================== */
   Future<void> _requestPermission() async {
     final settings = await _fcm.requestPermission(
       alert: true,
@@ -39,18 +257,50 @@ class NotificationService {
       sound: true,
     );
 
-    print("🔐 Permission: ${settings.authorizationStatus}");
+    print("🔐 FCM Permission: ${settings.authorizationStatus}");
   }
 
-  /// ----------------------------------------------------------
-  /// TOKEN
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * TOKEN - UPDATED WITH RETRY LOGIC
+   * ========================================================== */
   Future<void> _getAndRegisterToken() async {
-    final token = await _fcm.getToken();
-    print("📱 FCM Token: $token");
+    try {
+      if (Platform.isIOS) {
+        // 🍎 Wait for APNS token with retry logic
+        String? apnsToken;
+        int attempts = 0;
+        const maxAttempts = 10;
+        
+        while (apnsToken == null && attempts < maxAttempts) {
+          apnsToken = await _fcm.getAPNSToken();
+          
+          if (apnsToken == null) {
+            attempts++;
+            print('⏳ Waiting for APNS token... Attempt $attempts/$maxAttempts');
+            await Future.delayed(Duration(seconds: 1));
+          } else {
+            print('🍎 APNS Token received: $apnsToken');
+          }
+        }
+        
+        if (apnsToken == null) {
+          print('❌ APNS token not available after $maxAttempts attempts');
+          print('⚠️ Make sure you are testing on a REAL iOS device (not simulator)');
+          print('⚠️ Check Firebase Console for APNs Auth Key/Certificate');
+          // Don't return - let FCM try anyway, token refresh will handle it later
+        }
+      }
 
-    if (token != null) {
-      await registerTokenToBackend(token);
+      final fcmToken = await _fcm.getToken();
+      print("📱 FCM Token: $fcmToken");
+
+      if (fcmToken != null) {
+        await registerTokenToBackend(fcmToken);
+      } else {
+        print('⚠️ FCM token is null, will retry when token refreshes');
+      }
+    } catch (e) {
+      print('❌ FCM token error: $e');
     }
   }
 
@@ -61,9 +311,9 @@ class NotificationService {
     });
   }
 
-  /// ----------------------------------------------------------
-  /// REGISTER TO BACKEND
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * BACKEND REGISTRATION
+   * ========================================================== */
   Future<void> registerTokenToBackend(String fcmToken) async {
     try {
       await ApiService.request((accessToken) async {
@@ -81,132 +331,169 @@ class NotificationService {
         );
       });
 
-      print("✅ FCM Token registered to backend");
+      print("✅ FCM token registered to backend");
     } catch (e) {
-      print("❌ Failed to register FCM token: $e");
-      // Do NOT block the app flow if registration fails
+      print("❌ Token registration failed: $e");
     }
   }
 
-  /// ----------------------------------------------------------
-  /// LISTENERS
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * LISTENERS
+   * ========================================================== */
   void _setupListeners() {
     FirebaseMessaging.onMessage.listen((message) {
-      print('🟢 FCM(FG) RECEIVED');
-      print('🟢 FCM(FG) DATA => ${message.data}');
-      print('🟢 FCM(FG) NOTIFICATION => ${message.notification?.title}');
+      print('🟢 FCM FOREGROUND RECEIVED');
+      print('🟢 DATA => ${message.data}');
+      print('🟢 NOTIFICATION => ${message.notification?.title}');
 
-      // if (message.data['type'] == 'incoming_call') {
-      //   print('🟢 FCM(FG) TYPE = incoming_call');
-      //   handleIncomingCallFCM(message.data);
-      //   return;
-      // }
-
-      print('🟢 FCM(FG) NORMAL NOTIFICATION');
       _showLocalNotification(message);
     });
 
-    // ✅ NEW: Handle notification taps
-    // FirebaseMessaging.onMessageOpenedApp.listen((message) {
-    //   print("🚀 Opened from notification: ${message.data}");
-      
-    //   if (message.data['type'] == 'incoming_call') {
-    //     handleIncomingCallFCM(message.data);
-    //   }
-    // });
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      print('🚀 Notification tapped');
+      // if (message.data['type'] == 'incoming_call') {
+      //   handleIncomingCallFCM(message.data);
+      // }
+    });
   }
 
-  /// ----------------------------------------------------------
-  /// LOCAL NOTIFICATIONS
-  /// ----------------------------------------------------------
-  Future<void> initLocalNotifications() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_notification');
+  /* ==========================================================
+   * LOCAL NOTIFICATIONS INIT (ANDROID + iOS)
+   * ========================================================== */
+  // Future<void> initLocalNotifications() async {
+  //   const androidInit =
+  //       AndroidInitializationSettings('@mipmap/ic_notification');
 
-    // ✅ Add notification tap handler
-    final initSettings = InitializationSettings(
-      android: androidInit,
-    );
+  //   const iosInit = DarwinInitializationSettings(
+  //     requestAlertPermission: true,
+  //     requestBadgePermission: true,
+  //     requestSoundPermission: true,
+  //   );
 
-    await flutterLocalNotificationsPlugin.initialize(initSettings);
+  //   const initSettings = InitializationSettings(
+  //     android: androidInit,
+  //     iOS: iosInit,
+  //   );
 
-    // ✅ EXISTING CHANNEL - Keep as is
-    const highImportanceChannel = AndroidNotificationChannel(
-      'high_importance_channel',
-      'High Importance Notifications',
-      importance: Importance.high,
-    );
+  //   await flutterLocalNotificationsPlugin.initialize(
+  //     initSettings,
+  //     onDidReceiveNotificationResponse: (response) {
+  //       print('🔔 Notification tapped: ${response.payload}');
+  //     },
+  //   );
 
-    // ✅ NEW CHANNEL - For incoming calls
-    const callChannel = AndroidNotificationChannel(
-      'call_channel',
-      'Incoming Calls',
-      description: 'Notifications for incoming calls',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-    );
+  //   if (Platform.isAndroid) {
+  //     const highImportanceChannel = AndroidNotificationChannel(
+  //       'high_importance_channel',
+  //       'High Importance Notifications',
+  //       importance: Importance.high,
+  //     );
 
-    final androidPlugin = flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+  //     const callChannel = AndroidNotificationChannel(
+  //       'call_channel',
+  //       'Incoming Calls',
+  //       description: 'Notifications for incoming calls',
+  //       importance: Importance.max,
+  //       playSound: true,
+  //       enableVibration: true,
+  //     );
 
-    // ✅ Create BOTH channels
-    await androidPlugin!.createNotificationChannel(highImportanceChannel);
-    await androidPlugin!.createNotificationChannel(callChannel);
-  }
+  //     final androidPlugin = flutterLocalNotificationsPlugin
+  //         .resolvePlatformSpecificImplementation
+  //             AndroidFlutterLocalNotificationsPlugin>();
 
-  // ✅ NEW: Handle notification tap
-  // Future<void> _onNotificationTap(NotificationResponse details) async {
-  //   print('🔔 Notification tapped: ${details.payload}');
-    
-  //   if (details.payload != null) {
-  //     try {
-  //       final data = jsonDecode(details.payload!);
-        
-  //       if (data['type'] == 'incoming_call') {
-  //         // Handle based on action
-  //         if (details.actionId == 'answer') {
-  //           print('✅ User tapped ANSWER');
-  //           await handleIncomingCallFCM(data);
-  //         } else if (details.actionId == 'decline') {
-  //           print('❌ User tapped DECLINE');
-  //           // TODO: Call decline API
-  //           // You can add a decline method in your call service
-  //         } else {
-  //           // Notification body tapped (not action button)
-  //           print('📱 Notification body tapped');
-  //           await handleIncomingCallFCM(data);
-  //         }
-  //       }
-  //     } catch (e) {
-  //       print('❌ Error handling notification tap: $e');
-  //     }
+  //     await androidPlugin?.createNotificationChannel(highImportanceChannel);
+  //     await androidPlugin?.createNotificationChannel(callChannel);
   //   }
   // }
 
-  // ✅ KEEP EXISTING - Normal notifications
+
+
+
+
+
+  Future<void> initLocalNotifications() async {
+    const androidInit =
+        AndroidInitializationSettings('@mipmap/ic_notification');
+
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        print('🔔 Notification tapped: ${response.payload}');
+      },
+    );
+
+    if (Platform.isAndroid) {
+      const highImportanceChannel = AndroidNotificationChannel(
+        'high_importance_channel',
+        'High Importance Notifications',
+        importance: Importance.high,
+      );
+
+      const callChannel = AndroidNotificationChannel(
+        'call_channel',
+        'Incoming Calls',
+        description: 'Notifications for incoming calls',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      final androidPlugin = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      await androidPlugin?.createNotificationChannel(highImportanceChannel);
+      await androidPlugin?.createNotificationChannel(callChannel);
+    }
+  }
+  /* ==========================================================
+   * SHOW LOCAL NOTIFICATION
+   * ========================================================== */
   void _showLocalNotification(RemoteMessage message) {
     if (message.notification == null) return;
+
+    final androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
 
     flutterLocalNotificationsPlugin.show(
       message.hashCode,
       message.notification!.title,
       message.notification!.body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'high_importance_channel',
-          'High Importance Notifications',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
+      details,
+      payload: jsonEncode(message.data),
     );
   }
 
-  /// ----------------------------------------------------------
-  /// LOGOUT CLEANUP
-  /// ----------------------------------------------------------
+  /* ==========================================================
+   * LOGOUT CLEANUP
+   * ========================================================== */
   Future<void> deleteToken() async {
     await _fcm.deleteToken();
     print("🗑️ FCM token deleted");

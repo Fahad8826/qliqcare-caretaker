@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Utils/appbar.dart';
 import 'package:qlickcare/Utils/loading.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 
 import '../controller/complaintscontroller.dart';
 import 'complaintview.dart';
@@ -43,7 +44,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
             color: Colors.white,
             size: isPortrait ? size.width * 0.06 : size.height * 0.06,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       body: Obx(() {
@@ -239,7 +240,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                   Text("Submit Complaint", style: AppTextStyles.heading2),
                   IconButton(
                     icon: Icon(Icons.close, color: AppColors.textSecondary),
-                    onPressed: () => Get.back(),
+                    onPressed: () => Get.back(closeOverlays: true),
                     padding: EdgeInsets.zero,
                     constraints: BoxConstraints(),
                   ),
@@ -423,7 +424,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                         ? null
                         : () async {
                             if (subjectCtrl.text.trim().isEmpty) {
-                              Get.snackbar(
+                              showSnackbarSafe(
                                 "Error",
                                 "Please enter a subject",
                                 backgroundColor: AppColors.error.withOpacity(0.1),
@@ -432,7 +433,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                               return;
                             }
                             if (descriptionCtrl.text.trim().isEmpty) {
-                              Get.snackbar(
+                              showSnackbarSafe(
                                 "Error",
                                 "Please enter a description",
                                 backgroundColor: AppColors.error.withOpacity(0.1),
@@ -441,7 +442,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                               return;
                             }
                             if (descriptionCtrl.text.trim().length < 10) {
-                              Get.snackbar(
+                              showSnackbarSafe(
                                 "Error",
                                 "Description must be at least 10 characters",
                                 backgroundColor: AppColors.error.withOpacity(0.1),
@@ -450,7 +451,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                               return;
                             }
                             if (selectedPriority.value.isEmpty) {
-                              Get.snackbar(
+                              showSnackbarSafe(
                                 "Error",
                                 "Please select a priority",
                                 backgroundColor: AppColors.error.withOpacity(0.1),
@@ -465,7 +466,7 @@ class _ComplaintsPageState extends State<ComplaintsPage> {
                               priority: selectedPriority.value,
                             );
 
-                            Get.back();
+                            Get.back(closeOverlays: true);
 
                             controller.fetchMyComplaints();
                           },

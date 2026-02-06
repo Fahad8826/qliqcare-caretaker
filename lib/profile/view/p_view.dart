@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:qlickcare/Drawer/drawer.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/profile/controller/deleteaccount.dart';
 import 'package:qlickcare/profile/controller/profilecontroller.dart';
 import 'package:qlickcare/profile/service/shimmer.dart';
@@ -774,7 +775,7 @@ class PView extends StatelessWidget {
                           Navigator.pop(context);
                           onConfirm();
                         } else {
-                          Get.snackbar(
+                          showSnackbarSafe(
                             'Error',
                             'Please type DELETE exactly',
                             backgroundColor: Colors.red.shade50,

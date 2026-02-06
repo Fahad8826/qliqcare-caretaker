@@ -3,252 +3,152 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
-import 'package:qlickcare/Utils/appcolors.dart';
 import 'package:qlickcare/bookings/model/bookingdetails_model.dart';
 
 class BookingDetailsController extends GetxController {
   final isLoading = false.obs;
   final booking = Rxn<BookingDetails>();
 
-  String get baseUrl => "${dotenv.env['BASE_URL']}/api/caretaker/bookings";
+  /// 🔒 Internal fetch lock (prevents parallel API calls)
+  bool _isFetching = false;
 
+  /// 📦 Cache to avoid refetching same booking
+  final Map<int, BookingDetails> _cache = {};
 
-  Future<void> fetchBookingDetails(int bookingId) async {
-  isLoading.value = true;
+  String get baseUrl =>
+      "${dotenv.env['BASE_URL']}/api/caretaker/bookings";
 
-  try {
-    final url = "$baseUrl/$bookingId/";
-    debugPrint("📡 Fetching booking details from: $url");
+  // =====================================================
+  // FETCH BOOKING DETAILS (SAFE, SINGLE-FLIGHT)
+  // =====================================================
+  Future<void> fetchBookingDetails(
+    int bookingId, {
+    bool forceRefresh = false,
+  }) async {
+    // 🔒 Block parallel calls
+    if (_isFetching) {
+      debugPrint("⏭️ Skipping booking fetch (already in progress)");
+      return;
+    }
 
-    final response = await ApiService.request((token) {
-      return http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
-    });
+    // 📦 Serve cached data if available
+    if (!forceRefresh && _cache.containsKey(bookingId)) {
+      booking.value = _cache[bookingId];
+      debugPrint("📦 Booking loaded from cache: $bookingId");
+      return;
+    }
 
-    debugPrint("📥 Response status: ${response.statusCode}");
+    _isFetching = true;
+    isLoading.value = true;
 
-    if (response.statusCode == 200) {
-      try {
+    try {
+      final url = "$baseUrl/$bookingId/";
+      debugPrint("📡 Fetching booking details from: $url");
+
+      final response = await ApiService.request((token) {
+        return http.get(
+          Uri.parse(url),
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+        );
+      });
+
+      debugPrint("📥 Response status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        booking.value = BookingDetails.fromJson(data);
-        debugPrint("✅ Booking details loaded successfully");
-      } catch (parseError, stackTrace) {
-        debugPrint("❌ Parse Error: $parseError");
-        debugPrint("❌ Stack trace: $stackTrace");
+        final parsed = BookingDetails.fromJson(data);
 
-        Get.snackbar(
-          "Parse Error",
-          "Failed to parse booking data",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.error,
-          colorText: AppColors.background,
+        booking.value = parsed;
+        _cache[bookingId] = parsed;
+
+        debugPrint("✅ Booking details loaded successfully");
+      } else if (response.statusCode == 404) {
+        showSnackbarSafe("Not Found", "Booking not found");
+      } else {
+        showSnackbarSafe(
+          "Error",
+          "Failed to load booking details (${response.statusCode})",
         );
       }
-    } else if (response.statusCode == 404) {
-      Get.snackbar(
-        "Not Found",
-        "Booking not found",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error,
-        colorText: AppColors.background,
+    } catch (e, stackTrace) {
+      debugPrint("❌ Booking fetch error: $e");
+      debugPrint("❌ Stack trace: $stackTrace");
+
+      showSnackbarSafe(
+        "Network Error",
+        "Unable to load booking details",
       );
-    } else {
-      Get.snackbar(
-        "Error",
-        "Failed to load booking details (${response.statusCode})",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error,
-        colorText: AppColors.background,
-      );
+    } finally {
+      _isFetching = false;
+      isLoading.value = false;
     }
-  } catch (e, stackTrace) {
-    debugPrint("❌ Exception: $e");
-    debugPrint("❌ Stack trace: $stackTrace");
-
-    Get.snackbar(
-      "Error",
-      "Network error occurred",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.error,
-      colorText: AppColors.background,
-    );
-  } finally {
-    isLoading.value = false;
   }
-}
 
+  // =====================================================
+  // UPDATE TODO STATUS (NO REFETCH)
+  // =====================================================
   Future<void> updateTodoStatus(int todoId, bool isCompleted) async {
-  try {
-    final response = await ApiService.request((token) {
-      return http.patch(
-        Uri.parse(
-          "${dotenv.env['BASE_URL']}/api/caretaker/todos/$todoId/",
-        ),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "is_completed": isCompleted,
-        }),
-      );
-    });
+    try {
+      final response = await ApiService.request((token) {
+        return http.patch(
+          Uri.parse(
+            "${dotenv.env['BASE_URL']}/api/caretaker/todos/$todoId/",
+          ),
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "is_completed": isCompleted,
+          }),
+        );
+      });
 
-    if (response.statusCode == 200) {
-      if (booking.value != null) {
+      if (response.statusCode == 200 && booking.value != null) {
         final index =
             booking.value!.todos.indexWhere((t) => t.id == todoId);
+
         if (index != -1) {
           booking.value!.todos[index].isCompleted = isCompleted;
           booking.refresh();
         }
+
+        showSnackbarSafe(
+          "Success",
+          isCompleted ? "Task completed" : "Task marked incomplete",
+        );
+      } else {
+        showSnackbarSafe("Error", "Failed to update task");
       }
-
-      Get.snackbar(
-        "Success",
-        isCompleted ? "Task completed" : "Task marked incomplete",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.success,
-        colorText: AppColors.background,
-      );
-    } else {
-      Get.snackbar(
-        "Error",
-        "Failed to update task",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error,
-        colorText: AppColors.background,
-      );
+    } catch (e) {
+      debugPrint("❌ Error updating todo: $e");
+      showSnackbarSafe("Error", "Failed to update task");
     }
-  } catch (e) {
-    debugPrint("❌ Error updating todo: $e");
-    Get.snackbar(
-      "Error",
-      "Failed to update task",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.error,
-      colorText: AppColors.background,
-    );
-  }
-}
-
-
-  /// Getters for convenient access to booking data
-  bool get isCheckedInToday {
-    if (booking.value?.todayAttendance == null) return false;
-    return booking.value!.todayAttendance!.status == 'CHECKED_IN';
   }
 
-  bool get isCheckedOutToday {
-    if (booking.value?.todayAttendance == null) return false;
-    return booking.value!.todayAttendance!.status == 'CHECKED_OUT';
-  }
-
-  bool get isOnLeaveToday {
-    if (booking.value?.todayAttendance == null) return false;
-    return booking.value!.todayAttendance!.status == 'ON_LEAVE';
-  }
-
-  bool get canCheckIn {
-    return booking.value?.canCheckIn ?? false;
-  }
-
-  bool get canCheckOut {
-    return booking.value?.canCheckOut ?? false;
-  }
-
-  String get bookingStatus {
-    return booking.value?.bookingStatus ?? '';
-  }
-
-  int? get activeSessionNumber {
-    return booking.value?.todayAttendance?.activeSession;
-  }
-
-  double get todayHoursWorked {
-    return booking.value?.todayAttendance?.totalHoursToday ?? 0.0;
-  }
-
-  int get todayTotalSessions {
-    return booking.value?.todayAttendance?.totalSessions ?? 0;
-  }
-
-  // Attendance summary getters
-  double get attendanceRate {
-    return booking.value?.attendanceSummary?.attendanceRate ?? 0.0;
-  }
-
-  int get totalDaysWorked {
-    return booking.value?.attendanceSummary?.daysWorked ?? 0;
-  }
-
-  int get totalAbsentDays {
-    return booking.value?.attendanceSummary?.absentDays ?? 0;
-  }
-
-  int get totalLeaveDays {
-    return booking.value?.attendanceSummary?.leaveDays ?? 0;
-  }
-
-  double get totalHoursWorked {
-    return booking.value?.attendanceSummary?.totalHours ?? 0.0;
-  }
-
-  int get completedSessions {
-    return booking.value?.attendanceSummary?.completedSessions ?? 0;
-  }
-
-  int get activeSessions {
-    return booking.value?.attendanceSummary?.activeSessions ?? 0;
-  }
-
-  // Booking progress getters
-  int get daysRemaining {
-    return booking.value?.daysRemaining ?? 0;
-  }
-
-  int get daysElapsed {
-    return booking.value?.daysElapsed ?? 0;
-  }
-
-  // Patient info getters
-  String get patientName {
-    return booking.value?.patientName ?? '';
-  }
-
-  String get patientCondition {
-    return booking.value?.patientCondition ?? '';
-  }
-
-  String get mobilityLevel {
-    return booking.value?.mobilityLevel ?? '';
-  }
-
-  // Caretaker info getters
-  String? get caretakerName {
-    return booking.value?.caretakerName;
-  }
-
-  String? get caretakerPhone {
-    return booking.value?.caretakerPhone;
-  }
-
-  /// Refresh booking data
-  Future<void> refresh() async {
+  // =====================================================
+  // SAFE REFRESH (MANUAL ONLY)
+  // =====================================================
+  Future<void> refreshBooking() async {
     if (booking.value != null) {
-      await fetchBookingDetails(booking.value!.id);
+      await fetchBookingDetails(
+        booking.value!.id,
+        forceRefresh: true,
+      );
     }
   }
 
-  /// Clear controller data
+  // =====================================================
+  // CLEANUP
+  // =====================================================
   void clearData() {
     booking.value = null;
+    _cache.clear();
   }
 
   @override
@@ -256,4 +156,61 @@ class BookingDetailsController extends GetxController {
     clearData();
     super.onClose();
   }
+
+  // =====================================================
+  // GETTERS (UNCHANGED LOGIC)
+  // =====================================================
+  bool get isCheckedInToday =>
+      booking.value?.todayAttendance?.status == 'CHECKED_IN';
+
+  bool get isCheckedOutToday =>
+      booking.value?.todayAttendance?.status == 'CHECKED_OUT';
+
+  bool get isOnLeaveToday =>
+      booking.value?.todayAttendance?.status == 'ON_LEAVE';
+
+  bool get canCheckIn => booking.value?.canCheckIn ?? false;
+  bool get canCheckOut => booking.value?.canCheckOut ?? false;
+
+  String get bookingStatus => booking.value?.bookingStatus ?? '';
+
+  int? get activeSessionNumber =>
+      booking.value?.todayAttendance?.activeSession;
+
+  double get todayHoursWorked =>
+      booking.value?.todayAttendance?.totalHoursToday ?? 0.0;
+
+  int get todayTotalSessions =>
+      booking.value?.todayAttendance?.totalSessions ?? 0;
+
+  double get attendanceRate =>
+      booking.value?.attendanceSummary?.attendanceRate ?? 0.0;
+
+  int get totalDaysWorked =>
+      booking.value?.attendanceSummary?.daysWorked ?? 0;
+
+  int get totalAbsentDays =>
+      booking.value?.attendanceSummary?.absentDays ?? 0;
+
+  int get totalLeaveDays =>
+      booking.value?.attendanceSummary?.leaveDays ?? 0;
+
+  double get totalHoursWorked =>
+      booking.value?.attendanceSummary?.totalHours ?? 0.0;
+
+  int get completedSessions =>
+      booking.value?.attendanceSummary?.completedSessions ?? 0;
+
+  int get activeSessions =>
+      booking.value?.attendanceSummary?.activeSessions ?? 0;
+
+  int get daysRemaining => booking.value?.daysRemaining ?? 0;
+  int get daysElapsed => booking.value?.daysElapsed ?? 0;
+
+  String get patientName => booking.value?.patientName ?? '';
+  String get patientCondition => booking.value?.patientCondition ?? '';
+  String get mobilityLevel => booking.value?.mobilityLevel ?? '';
+
+  String? get caretakerName => booking.value?.caretakerName;
+  String? get caretakerPhone => booking.value?.caretakerPhone;
 }

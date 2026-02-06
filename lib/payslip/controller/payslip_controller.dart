@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 
 import '../model/payslip_model.dart';
@@ -46,10 +47,10 @@ class PayslipController extends GetxController {
         payslips.value =
             list.map((e) => PayslipModel.fromJson(e)).toList();
       } else {
-        Get.snackbar("Error", "Failed to load payslips");
+        showSnackbarSafe("Error", "Failed to load payslips");
       }
     } catch (e) {
-      Get.snackbar("Error", "Session expired. Please login again.");
+      showSnackbarSafe("Error", "Session expired. Please login again.");
     } finally {
       isLoading.value = false;
     }
@@ -82,7 +83,7 @@ class PayslipController extends GetxController {
           fileName: "${payslip.invoiceNumber}.pdf",
         );
 
-        Get.snackbar(
+        showSnackbarSafe(
           "Payslip Downloaded",
           "Tap to open the PDF",
           snackPosition: SnackPosition.BOTTOM,
@@ -96,10 +97,10 @@ class PayslipController extends GetxController {
           ),
         );
       } else {
-        Get.snackbar("Error", "Failed to download payslip");
+        showSnackbarSafe("Error", "Failed to download payslip");
       }
     } catch (e) {
-      Get.snackbar("Error", "Session expired. Please login again.");
+      showSnackbarSafe("Error", "Session expired. Please login again.");
     } finally {
       isLoading.value = false;
     }

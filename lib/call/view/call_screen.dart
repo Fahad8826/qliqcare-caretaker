@@ -30,7 +30,7 @@
 //     await Future.delayed(const Duration(seconds: 3));
 
 //     if (mounted && Get.isOverlaysOpen == false) {
-//       Get.back(); // ✅ go to previous screen
+//       Get.back(closeOverlays: true); // ✅ go to previous screen
 //     }
 //   }
 

@@ -27,7 +27,7 @@ class PayslipListView extends StatelessWidget {
             color: Colors.white,
             size: isPortrait ? size.width * 0.055 : size.height * 0.065,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () => Get.back(closeOverlays: true),
         ),
       ),
       body: Obx(() {

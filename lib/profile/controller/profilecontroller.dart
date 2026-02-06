@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:qlickcare/Utils/safe_snackbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:qlickcare/authentication/service/tokenexpireservice.dart';
 
@@ -176,7 +177,7 @@ class P_Controller extends GetxController {
       if (resp.statusCode == 200) {
         profile.value = Profile.fromJson(jsonDecode(resp.body));
       } else {
-        Get.snackbar("Error", "Failed to load profile");
+        showSnackbarSafe("Error", "Failed to load profile");
       }
     } catch (e) {
       print("Session expired. Please login again.");
@@ -262,7 +263,7 @@ class P_Controller extends GetxController {
         // ✅ NEW: Clear cache after update
         await clearCache();
         
-        Get.snackbar("Success", "Profile updated successfully",
+        showSnackbarSafe("Success", "Profile updated successfully",
             backgroundColor: Colors.green, colorText: Colors.white);
       }
       return success;

@@ -54,6 +54,9 @@ class _todoState extends State<todo> with AutomaticKeepAliveClientMixin {
       if (!bookingController.isLoading.value) {
         bookingController.fetchOngoingBookings();
       }
+
+      _buildBookingDetails();
+      
     }
   }
 
@@ -407,89 +410,149 @@ class _todoState extends State<todo> with AutomaticKeepAliveClientMixin {
   }
 
   Widget _buildAttendanceSection(BookingDetails booking) {
-    if (detailsController.isCheckedOutToday) {
-      return Center(
-        child: Text(
-          "Attendance completed for today",
-          style: AppTextStyles.small.copyWith(
-            color: AppColors.success,
-            fontWeight: FontWeight.w600,
-          ),
+  if (detailsController.isCheckedOutToday) {
+    return Center(
+      child: Text(
+        "Attendance completed for today",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.success,
+          fontWeight: FontWeight.w600,
         ),
-      );
-    }
-
-    if (detailsController.isOnLeaveToday) {
-      return Center(
-        child: Text(
-          "You are on leave today",
-          style: AppTextStyles.small.copyWith(
-            color: AppColors.success,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    if (booking.endDate.isNotEmpty && _isBookingCompleted(booking.endDate)) {
-      return Center(
-        child: Text(
-          "Booking period is completed",
-          style: AppTextStyles.small.copyWith(
-            color: AppColors.error,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    double? bookingLat;
-    double? bookingLng;
-
-    try {
-      if (booking.latitude.isNotEmpty && booking.longitude.isNotEmpty) {
-        bookingLat = double.parse(booking.latitude);
-        bookingLng = double.parse(booking.longitude);
-      }
-    } catch (e) {
-      debugPrint("❌ Location parse error: $e");
-    }
-
-    if (bookingLat == null || bookingLng == null) {
-      return Center(
-        child: Text(
-          "Location not available for this booking",
-          style: AppTextStyles.small.copyWith(
-            color: AppColors.error,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    return LocationGuard(
-      targetLatitude: bookingLat,
-      targetLongitude: bookingLng,
-      radiusInMeters: 500.0,
-      showDistance: true,
-      autoRefresh: false,
-      refreshIntervalSeconds: 30,
-      onLocationStatusChanged: (isWithinRange, distance) {
-        debugPrint("📍 Todo Page → withinRange: $isWithinRange | distance: $distance");
-      },
-      child: AttendanceSlideButton(
-        isCheckedIn: detailsController.isCheckedInToday,
-        onCheckIn: () async {
-          await attendanceController.handleCheckIn(booking.id);
-          await detailsController.fetchBookingDetails(selectedBookingId.value);
-        },
-        onCheckOut: () async {
-          await attendanceController.handleCheckOut(booking.id);
-          await detailsController.fetchBookingDetails(selectedBookingId.value);
-        },
       ),
     );
   }
+
+  if (detailsController.isOnLeaveToday) {
+    return Center(
+      child: Text(
+        "You are on leave today",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.success,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  if (booking.endDate.isNotEmpty && _isBookingCompleted(booking.endDate)) {
+    return Center(
+      child: Text(
+        "Booking period is completed",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.error,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  double? bookingLat;
+  double? bookingLng;
+
+  try {
+    if (booking.latitude.isNotEmpty && booking.longitude.isNotEmpty) {
+      bookingLat = double.parse(booking.latitude);
+      bookingLng = double.parse(booking.longitude);
+    }
+  } catch (e) {
+    debugPrint("❌ Location parse error: $e");
+  }
+
+  if (bookingLat == null || bookingLng == null) {
+    return Center(
+      child: Text(
+        "Location not available for this booking",
+        style: AppTextStyles.small.copyWith(
+          color: AppColors.error,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  return LocationGuard(
+    targetLatitude: bookingLat,
+    targetLongitude: bookingLng,
+    radiusInMeters: 500.0,
+    showDistance: true,
+    autoRefresh: false,
+    refreshIntervalSeconds: 30,
+    onLocationStatusChanged: (isWithinRange, distance) {
+      debugPrint("📍 Todo Page → withinRange: $isWithinRange | distance: $distance");
+    },
+    child: Obx(() => AttendanceSlideButton(
+      // ✅ Now this will reactively update when detailsController updates
+      isCheckedIn: detailsController.isCheckedInToday,
+      onCheckIn: () async {
+        await _handleAttendanceAction(
+          action: () => attendanceController.handleCheckIn(booking.id),
+          actionName: "Check-in",
+        );
+      },
+      onCheckOut: () async {
+        await _handleAttendanceAction(
+          action: () => attendanceController.handleCheckOut(booking.id),
+          actionName: "Check-out",
+        );
+      },
+    )),
+  );
+}
+
+// Update this method to ensure reactive updates
+Future<void> _handleAttendanceAction({
+  required Future<void> Function() action,
+  required String actionName,
+}) async {
+  try {
+    debugPrint("🔄 Starting $actionName...");
+    
+    // Perform the attendance action
+    await action();
+    
+    debugPrint("✅ $actionName API call completed");
+    
+    // Refresh booking details for current selection
+    await detailsController.fetchBookingDetails(selectedBookingId.value);
+    
+    debugPrint("✅ Booking details refreshed");
+    
+    // Optionally: Refresh the entire bookings list
+    await bookingController.fetchOngoingBookings();
+    
+    debugPrint("✅ Bookings list refreshed");
+    
+    // Force UI rebuild (may not be necessary with Obx, but doesn't hurt)
+    if (mounted) {
+      setState(() {});
+    }
+    
+    debugPrint("✅ $actionName completed and page refreshed");
+    
+    // Optional: Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("$actionName successful!"),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  } catch (e) {
+    debugPrint("❌ $actionName error: $e");
+    // Show error to user
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("$actionName failed. Please try again."),
+          backgroundColor: AppColors.error,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+}
 
   bool _isBookingCompleted(String endDateStr) {
     try {

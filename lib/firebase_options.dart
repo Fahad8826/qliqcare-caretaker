@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBwv9g-P9f0pv6fcxaG3U0PWh5jVEd4tug',
-    appId: '1:581563357515:ios:206327719e0b58e5c770ce',
+    appId: '1:581563357515:ios:3aa71c4e2d54ae20c770ce',
     messagingSenderId: '581563357515',
     projectId: 'qliqcare-b9670',
     storageBucket: 'qliqcare-b9670.firebasestorage.app',
@@ -69,7 +69,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBwv9g-P9f0pv6fcxaG3U0PWh5jVEd4tug',
-    appId: '1:581563357515:ios:206327719e0b58e5c770ce',
+    appId: '1:581563357515:ios:3aa71c4e2d54ae20c770ce',
     messagingSenderId: '581563357515',
     projectId: 'qliqcare-b9670',
     storageBucket: 'qliqcare-b9670.firebasestorage.app',
@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'qliqcare-b9670.firebasestorage.app',
     measurementId: 'G-1FK7VV9Y57',
   );
+
 }
